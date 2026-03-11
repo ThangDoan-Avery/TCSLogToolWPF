@@ -2,7 +2,6 @@
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using TCSLogTool.App.Commands;
 using TCSLogTool.Core.Services;
 using TCSLogTool.Domain.Entities;
 
@@ -20,7 +19,7 @@ public class MainViewModel
     {
         this.analyzer = analyzer;
 
-        OpenFileCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(OpenFile);
+        OpenFileCommand = new RelayCommand(OpenFile);
     }
 
     private void OpenFile()
