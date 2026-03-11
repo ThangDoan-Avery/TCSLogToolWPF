@@ -12,25 +12,28 @@ public class AttributeSeriesBuilder
             .Where(x =>
                 x.Device != null &&
                 x.Attribute != null &&
-                x.NumericValue != null);
+                x.NumericValue != null &&
+                !x.IsState);
 
         var groups = attributeLogs
             .GroupBy(x => new { x.Device, x.Attribute });
 
         foreach (var group in groups)
         {
+            var ordered = group
+                .OrderBy(x => x.Timestamp)
+                .ToList();
+
             var series = new AttributeSeries
             {
                 Device = group.Key.Device!,
                 Attribute = group.Key.Attribute!
             };
 
-            foreach (var log in group.OrderBy(x => x.Timestamp))
+            foreach (var log in ordered)
             {
                 series.Points.Add(new AttributePoint
                 {
-                    Device = log.Device!,
-                    Attribute = log.Attribute!,
                     Time = log.Timestamp,
                     Value = log.NumericValue!.Value
                 });

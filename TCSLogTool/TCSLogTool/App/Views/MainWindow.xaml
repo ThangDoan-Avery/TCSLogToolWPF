@@ -14,6 +14,34 @@
         <DataGrid ItemsSource="{Binding Logs}"
                   AutoGenerateColumns="True"/>
 
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="2*" />
+            </Grid.RowDefinitions>
+
+            <!-- Commands -->
+            <DataGrid Grid.Row="0"
+              ItemsSource="{Binding Commands}"
+              AutoGenerateColumns="True"/>
+
+            <!-- States -->
+            <DataGrid Grid.Row="1"
+              ItemsSource="{Binding States}"
+              AutoGenerateColumns="True"/>
+
+            <!-- Attributes -->
+            <DataGrid Grid.Row="2"
+              ItemsSource="{Binding AttributeSeries}"
+              AutoGenerateColumns="True"/>
+
+            <!-- AttributesPoint -->
+            <DataGrid Grid.Row="2"
+              ItemsSource="{Binding AttributePoints}"
+              AutoGenerateColumns="True"/>
+
+        </Grid>
     </DockPanel>
 
 </Window>

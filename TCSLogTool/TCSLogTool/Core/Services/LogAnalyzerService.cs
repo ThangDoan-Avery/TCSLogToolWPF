@@ -1,4 +1,5 @@
-﻿using TCSLogTool.Core.Interfaces;
+﻿using TCSLogTool.Core.Analyzers;
+using TCSLogTool.Core.Interfaces;
 using TCSLogTool.Domain.Entities;
 
 namespace TCSLogTool.Core.Services;
@@ -7,40 +8,50 @@ public class LogAnalyzerService
 {
     private readonly ILogReader reader;
     private readonly ILogParser parser;
-    private readonly StateTimelineBuilder stateBuilder = new();
 
-    private readonly CommandLifecycleBuilder commandBuilder = new();
+    private readonly CommandAnalyzer commandAnalyzer =
+        new();
 
-    public LogAnalyzerService(
-        ILogReader reader,
-        ILogParser parser)
+    private readonly StateAnalyzer stateAnalyzer =
+        new();
+
+    private readonly AttributeAnalyzer attributeAnalyzer =
+    new();
+
+    public LogAnalyzerService(ILogReader reader, ILogParser parser)
     {
         this.reader = reader;
         this.parser = parser;
     }
 
-    public List<StateSegment> BuildStates(List<LogEntry> logs)
-    {
-        return stateBuilder.Build(logs);
-    }
-
     public List<LogEntry> Load(string path)
     {
-        var result = new List<LogEntry>();
+        List<LogEntry> logs = new();
 
         foreach (var line in reader.Read(path))
         {
             var entry = parser.Parse(line);
 
             if (entry != null)
-                result.Add(entry);
+                logs.Add(entry);
         }
 
-        return result;
+        return logs;
     }
 
-    public List<CommandExecution> BuildCommands(List<LogEntry> logs)
+    public List<CommandExecution> AnalyzeCommands(List<LogEntry> logs)
     {
-        return commandBuilder.Build(logs);
+        return commandAnalyzer.Analyze(logs);
     }
+
+    public List<StateSegment> AnalyzeStates(List<LogEntry> logs)
+    {
+        return stateAnalyzer.Analyze(logs);
+    }
+
+    public List<AttributeSeries> AnalyzeAttributes(List<LogEntry> logs)
+    {
+        return attributeAnalyzer.Analyze(logs);
+    }
+
 }

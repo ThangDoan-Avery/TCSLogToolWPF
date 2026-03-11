@@ -11,7 +11,7 @@ public class StateTimelineBuilder
         if (logs.Count == 0)
             return result;
 
-        DateTime timelineStart = logs.First().Timestamp;
+        DateTimeOffset timelineStart = logs.First().Timestamp;
 
         // group theo device
         var deviceStates = logs
@@ -26,7 +26,7 @@ public class StateTimelineBuilder
                 .OrderBy(x => x.Timestamp)
                 .ToList();
 
-            DateTime currentStart = timelineStart;
+            DateTimeOffset currentStart = timelineStart;
             string currentState = "IDLE";
 
             foreach (var s in states)

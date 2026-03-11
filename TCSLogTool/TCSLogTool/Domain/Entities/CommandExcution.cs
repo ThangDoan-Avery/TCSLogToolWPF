@@ -1,10 +1,16 @@
-﻿public class CommandExecution
+﻿namespace TCSLogTool.Domain.Entities;
+
+public class CommandExecution
 {
-    public string Device;
-    public string Command;
+    public int TrId { get; set; }
 
-    public int TrId;
+    public string Device { get; set; } = "";
 
-    public DateTime Start;
-    public DateTime End;
+    public string Command { get; set; } = "";
+
+    public DateTimeOffset Start { get; set; }
+
+    public DateTimeOffset End { get; set; }
+
+    public TimeSpan Duration => End - Start;
 }

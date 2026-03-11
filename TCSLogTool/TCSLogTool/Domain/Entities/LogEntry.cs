@@ -2,7 +2,7 @@
 
 public class LogEntry
 {
-    public DateTime Timestamp { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
 
     public string Raw { get; set; } = "";
 

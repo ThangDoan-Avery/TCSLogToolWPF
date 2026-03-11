@@ -6,78 +6,138 @@ namespace TCSLogTool.Infrastructure.Parsers;
 
 public class TcsLogParser : ILogParser
 {
-    private readonly Regex timestampRegex =
-        new(@"^\d{4}-\d{2}-\d{2} .*?\+\d{2}:\d{2}");
+    private static readonly Regex timestampRegex =
+    new(@"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{2}:\d{2})");
 
-    private readonly Regex commandRegex =
+    private static readonly Regex commandRegex =
         new(@"<(\d+):([A-Za-z0-9_]+),([A-Za-z0-9_]+)");
+    ////new(@"<(\d+):Cmd,([A-Za-z0-9_]+),([A-Za-z0-9_]+)");
+    //private static readonly Regex commandRegex = 
+    //    new Regex(@"<(\d+):Cmd,([^,]+),([^>]+)>");
 
-    private readonly Regex resRegex =
+    private static readonly Regex resRegex =
         new(@"<(\d+):Res");
 
-    private readonly Regex stateRegex =
-        new(@"<-?\d+:Sts,([A-Za-z0-9_]+),([A-Za-z0-9_]+),(-?\d+)");
+    private static readonly Regex stateRegex =
+        new(@"Sts,([A-Za-z0-9_]+),State,(-?\d+)");
 
     public LogEntry? Parse(string line)
     {
-        var tsMatch = timestampRegex.Match(line);
+        var timeMatch = timestampRegex.Match(line);
 
-        if (!tsMatch.Success)
+        if (!timeMatch.Success)
             return null;
 
-        var timestamp = DateTime.Parse(tsMatch.Value);
+        if (!DateTimeOffset.TryParseExact(
+        timeMatch.Groups[1].Value,
+        "yyyy-MM-dd HH:mm:ss.fff zzz",
+        System.Globalization.CultureInfo.InvariantCulture,
+        System.Globalization.DateTimeStyles.None,
+        out DateTimeOffset time))
+        {
+            return null;
+        }
 
         var entry = new LogEntry
         {
-            Timestamp = timestamp,
+            Timestamp = time,
             Raw = line
         };
 
         ParseCommand(line, entry);
+
         ParseRes(line, entry);
+
         ParseState(line, entry);
+
+        ParseAttribute(line, entry);
 
         return entry;
     }
 
     private void ParseCommand(string line, LogEntry entry)
     {
-        var match = commandRegex.Match(line);
+        var m = commandRegex.Match(line);
 
-        if (!match.Success)
+        if (!m.Success)
             return;
 
-        entry.TrId = int.Parse(match.Groups[1].Value);
-        entry.Command = match.Groups[2].Value;
-        entry.Device = match.Groups[3].Value;
+        int trid = int.Parse(m.Groups[1].Value);
+
+        string cmd = m.Groups[2].Value;
+
+        string device = m.Groups[3].Value;
+
+        entry.TrId = trid;
+
+        entry.Command = cmd;
+
+        entry.Device = device;
+
         entry.IsCommand = true;
     }
 
     private void ParseRes(string line, LogEntry entry)
     {
-        var match = resRegex.Match(line);
+        var m = resRegex.Match(line);
 
-        if (!match.Success)
+        if (!m.Success)
             return;
 
-        entry.TrId = int.Parse(match.Groups[1].Value);
+        int trid = int.Parse(m.Groups[1].Value);
+
+        entry.TrId = trid;
+
         entry.IsRes = true;
     }
 
     private void ParseState(string line, LogEntry entry)
     {
-        var match = stateRegex.Match(line);
+        var m = stateRegex.Match(line);
 
-        if (!match.Success)
+        if (!m.Success)
             return;
 
-        entry.Device = match.Groups[1].Value;
-        entry.Attribute = match.Groups[2].Value;
-        entry.Value = match.Groups[3].Value;
+        entry.Device = m.Groups[1].Value;
 
-        if (double.TryParse(entry.Value, out var num))
-            entry.NumericValue = num;
+        entry.Attribute = "State";
+
+        entry.Value = m.Groups[2].Value;
+
+        if (double.TryParse(entry.Value, out double v))
+        {
+            entry.NumericValue = v;
+        }
 
         entry.IsState = true;
+    }
+
+    private void ParseAttribute(string line, LogEntry entry)
+    {
+        if (entry.IsState)
+            return;
+
+        if (!line.Contains("Sts,"))
+            return;
+
+        var parts = line.Split(',');
+
+        if (parts.Length < 4)
+            return;
+
+        string device = parts[1];
+        string attr = parts[2];
+        string valuePart = parts[3];
+
+        int idx = valuePart.IndexOf('>');
+        if (idx >= 0)
+            valuePart = valuePart.Substring(0, idx);
+
+        entry.Device = device;
+        entry.Attribute = attr;
+        entry.Value = valuePart;
+
+        if (double.TryParse(valuePart, out double v))
+            entry.NumericValue = v;
     }
 }

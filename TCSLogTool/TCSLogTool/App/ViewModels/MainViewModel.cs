@@ -13,6 +13,14 @@ public class MainViewModel
 
     public ObservableCollection<LogEntry> Logs { get; } = new();
 
+    public ObservableCollection<CommandExecution> Commands { get; } = new();
+
+    public ObservableCollection<StateSegment> States { get; } = new();
+
+    public ObservableCollection<AttributeSeries> AttributeSeries { get; } = new();
+
+    public ObservableCollection<AttributePoint> AttributePoints { get; } = new();
+
     public ICommand OpenFileCommand { get; }
 
     public MainViewModel(LogAnalyzerService analyzer)
@@ -30,10 +38,35 @@ public class MainViewModel
             return;
 
         var logs = analyzer.Load(dialog.FileName);
+        var commands = analyzer.AnalyzeCommands(logs);
+        var states = analyzer.AnalyzeStates(logs);
+        var attributes = analyzer.AnalyzeAttributes(logs);
 
         Logs.Clear();
 
         foreach (var log in logs)
             Logs.Add(log);
+
+        Commands.Clear();
+        States.Clear();
+        AttributeSeries.Clear();
+
+        foreach (var c in commands)
+            Commands.Add(c);
+
+        foreach (var s in states)
+            States.Add(s);
+
+        foreach (var a in attributes)
+            AttributeSeries.Add(a);
+
+        foreach (var series in attributes)
+        {
+            foreach (var p in series.Points)
+            {
+                AttributePoints.Add(p);
+            }
+        }
+
     }
 }
