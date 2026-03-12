@@ -11,10 +11,6 @@ public class TcsLogParser : ILogParser
 
     private static readonly Regex commandRegex =
         new(@"<(\d+):([A-Za-z0-9_]+),([A-Za-z0-9_]+)");
-    ////new(@"<(\d+):Cmd,([A-Za-z0-9_]+),([A-Za-z0-9_]+)");
-    //private static readonly Regex commandRegex = 
-    //    new Regex(@"<(\d+):Cmd,([^,]+),([^>]+)>");
-
     private static readonly Regex resRegex =
         new(@"<(\d+):Res");
 
@@ -57,22 +53,19 @@ public class TcsLogParser : ILogParser
 
     private void ParseCommand(string line, LogEntry entry)
     {
+        if (!line.Contains("Received from TC"))
+            return;
+
         var m = commandRegex.Match(line);
 
         if (!m.Success)
             return;
 
-        int trid = int.Parse(m.Groups[1].Value);
+        entry.TrId = int.Parse(m.Groups[1].Value);
 
-        string cmd = m.Groups[2].Value;
+        entry.Command = m.Groups[2].Value;
 
-        string device = m.Groups[3].Value;
-
-        entry.TrId = trid;
-
-        entry.Command = cmd;
-
-        entry.Device = device;
+        entry.Device = m.Groups[3].Value;
 
         entry.IsCommand = true;
     }
@@ -84,9 +77,7 @@ public class TcsLogParser : ILogParser
         if (!m.Success)
             return;
 
-        int trid = int.Parse(m.Groups[1].Value);
-
-        entry.TrId = trid;
+        entry.TrId = int.Parse(m.Groups[1].Value);
 
         entry.IsRes = true;
     }
@@ -114,6 +105,9 @@ public class TcsLogParser : ILogParser
 
     private void ParseAttribute(string line, LogEntry entry)
     {
+        if (entry.IsState || entry.IsCommand || entry.IsRes)
+            return;
+
         if (entry.IsState)
             return;
 
