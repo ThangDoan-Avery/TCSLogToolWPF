@@ -1,4 +1,5 @@
-﻿using TCSLogTool.Domain.Entities;
+﻿using System.Diagnostics;
+using TCSLogTool.Domain.Entities;
 
 namespace TCSLogTool.Core.Analyzers;
 
@@ -43,10 +44,10 @@ public class AttributeAnalyzer
             });
         }
 
-        foreach (var s in seriesMap.Values)
+        foreach (var seri in seriesMap.Values)
         {
-            s.Points = s.Points
-                .OrderBy(p => p.Time)
+            seri.Points = seri.Points
+                .OrderBy(point => point.Time)
                 .ToList();
         }
 

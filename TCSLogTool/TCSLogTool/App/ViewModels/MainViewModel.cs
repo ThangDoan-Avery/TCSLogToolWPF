@@ -51,20 +51,20 @@ public class MainViewModel
         States.Clear();
         AttributeSeries.Clear();
 
-        foreach (var c in commands)
-            Commands.Add(c);
+        foreach (var command in commands)
+            Commands.Add(command);
 
-        foreach (var s in states)
-            States.Add(s);
+        foreach (var state in states)
+            States.Add(state);
 
-        foreach (var a in attributes)
-            AttributeSeries.Add(a);
+        foreach (var attribute in attributes)
+            AttributeSeries.Add(attribute);
 
         foreach (var series in attributes)
         {
-            foreach (var p in series.Points)
+            foreach (var point in series.Points)
             {
-                AttributePoints.Add(p);
+                AttributePoints.Add(point);
             }
         }
 
