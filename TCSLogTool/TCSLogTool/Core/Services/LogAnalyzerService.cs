@@ -9,14 +9,11 @@ public class LogAnalyzerService
     private readonly ILogReader reader;
     private readonly ILogParser parser;
 
-    private readonly CommandAnalyzer commandAnalyzer =
-        new();
+    private readonly CommandAnalyzer commandAnalyzer = new();
 
-    private readonly StateAnalyzer stateAnalyzer =
-        new();
+    private readonly StateAnalyzer stateAnalyzer = new();
 
-    private readonly AttributeAnalyzer attributeAnalyzer =
-    new();
+    private readonly AttributeAnalyzer attributeAnalyzer = new();
 
     public LogAnalyzerService(ILogReader reader, ILogParser parser)
     {
