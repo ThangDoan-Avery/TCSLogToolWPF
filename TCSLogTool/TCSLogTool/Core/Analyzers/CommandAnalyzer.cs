@@ -72,6 +72,7 @@ public class CommandAnalyzer
             Command = start.Command,
             Start = start.Timestamp,
             End = log.Timestamp,
+            DeviceType = start.DeviceType
         };
 
         result.Add(cmd);
