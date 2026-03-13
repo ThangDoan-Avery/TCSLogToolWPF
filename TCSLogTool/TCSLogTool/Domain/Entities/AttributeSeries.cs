@@ -11,4 +11,6 @@ public class AttributeSeries
     public bool IsDiscrete { get; set; }
 
     public List<AttributePoint> Points { get; set; } = new();
+
+    public string? Unit { get; set; }
 }

@@ -1,6 +1,4 @@
-﻿using TCSLogTool.Domain.Enums;
-
-namespace TCSLogTool.Domain.Catalogs;
+﻿namespace TCSLogTool.Domain.Catalogs;
 
 public static class DeviceCatalog
 {

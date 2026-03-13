@@ -25,6 +25,4 @@
     public bool IsRes { get; set; }
 
     public bool IsState { get; set; }
-
-    public string? Label { get; set; }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using TCSLogTool.Domain.Catalogs;
 using TCSLogTool.Domain.Entities;
 
 namespace TCSLogTool.Core.Analyzers;
@@ -32,7 +33,8 @@ public class AttributeAnalyzer
                     Device = log.Device,
                     Attribute = log.Attribute,
                     DeviceType = log.DeviceType,
-                    IsDiscrete = DetectDiscrete(log.Attribute)
+                    IsDiscrete = DetectDiscrete(log.Attribute),
+                    Unit = AttributeCatalog.GetUnit(log.Attribute)
                 };
 
                 seriesMap[key] = series;
@@ -41,8 +43,11 @@ public class AttributeAnalyzer
             series.Points.Add(new AttributePoint
             {
                 Time = log.Timestamp,
-                Value = log.NumericValue.Value
-            });
+                Value = log.NumericValue.Value,
+                Label = AttributeCatalog.GetStatusLabel(
+                    log.DeviceType,
+                    (int)log.NumericValue.Value)
+                });
         }
 
         foreach (var seri in seriesMap.Values)

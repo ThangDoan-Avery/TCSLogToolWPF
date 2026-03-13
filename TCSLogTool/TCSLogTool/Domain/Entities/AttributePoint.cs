@@ -5,4 +5,6 @@ public class AttributePoint
     public DateTimeOffset Time { get; set; }
 
     public double Value { get; set; }
+
+    public string? Label { get; set; }
 }
