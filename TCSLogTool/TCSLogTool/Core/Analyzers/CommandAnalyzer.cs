@@ -4,24 +4,29 @@ namespace TCSLogTool.Core.Analyzers;
 
 public class CommandAnalyzer
 {
-    private readonly Dictionary<int, LogEntry> pending =
-        new();
-
     public List<CommandExecution> Analyze(List<LogEntry> logs)
     {
-        List<CommandExecution> result = new();
+        var result = new List<CommandExecution>();
+
+        var pending = new Dictionary<int, LogEntry>();
+
+        logs = logs
+            .OrderBy(x => x.Timestamp)
+            .ToList();
 
         foreach (var log in logs)
         {
-            HandleCommandStart(log);
+            HandleCommandStart(log, pending);
 
-            HandleRes(log, result);
+            HandleRes(log, pending, result);
         }
 
         return result;
     }
 
-    private void HandleCommandStart(LogEntry log)
+    private void HandleCommandStart(
+        LogEntry log,
+        Dictionary<int, LogEntry> pending)
     {
         if (!log.IsCommand)
             return;
@@ -31,14 +36,17 @@ public class CommandAnalyzer
 
         int trid = log.TrId.Value;
 
-        // nếu TrID bị reuse thì drop command cũ
+        // TrID reuse thì drop old
         if (pending.ContainsKey(trid))
             pending.Remove(trid);
 
         pending[trid] = log;
     }
 
-    private void HandleRes(LogEntry log, List<CommandExecution> result)
+    private void HandleRes(
+        LogEntry log,
+        Dictionary<int, LogEntry> pending,
+        List<CommandExecution> result)
     {
         if (!log.IsRes)
             return;
@@ -54,13 +62,16 @@ public class CommandAnalyzer
         if (start.Device == null || start.Command == null)
             return;
 
-        CommandExecution cmd = new()
+        if (log.Timestamp < start.Timestamp)
+            return;
+
+        var cmd = new CommandExecution
         {
             TrId = trid,
             Device = start.Device,
             Command = start.Command,
             Start = start.Timestamp,
-            End = log.Timestamp
+            End = log.Timestamp,
         };
 
         result.Add(cmd);

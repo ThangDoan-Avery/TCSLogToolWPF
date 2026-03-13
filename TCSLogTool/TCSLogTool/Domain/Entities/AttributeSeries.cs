@@ -8,5 +8,7 @@ public class AttributeSeries
 
     public bool IsDiscrete { get; set; }
 
+    public DeviceType DeviceType { get; set; } = DeviceType.Other;
+
     public List<AttributePoint> Points { get; set; } = new();
 }

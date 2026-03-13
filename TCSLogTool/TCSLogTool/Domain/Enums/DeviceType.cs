@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TCSLogTool.Domain.Enums
+﻿public enum DeviceType
 {
-    internal class DeviceType
-    {
-    }
+    Robot,
+    Lift,
+    Door,
+    SlitValve,
+    Valve,
+    PressureGauge,
+    Pump,
+    MFC,
+    PressureCtrl,
+    ThrottleValve,
+    Heater,
+    Other
 }

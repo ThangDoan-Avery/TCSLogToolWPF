@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using TCSLogTool.Core.Interfaces;
+using TCSLogTool.Domain.Catalogs;
 using TCSLogTool.Domain.Entities;
 
 namespace TCSLogTool.Infrastructure.Parsers;
@@ -67,6 +68,8 @@ public class TcsLogParser : ILogParser
 
         entry.Device = m.Groups[3].Value;
 
+        entry.DeviceType = DeviceCatalog.GetType(entry.Device);
+
         entry.IsCommand = true;
     }
 
@@ -94,6 +97,10 @@ public class TcsLogParser : ILogParser
         entry.Attribute = "State";
 
         entry.Value = m.Groups[2].Value;
+
+        entry.DeviceType = DeviceCatalog.GetType(entry.Device);
+
+        entry.AttributeType = AttributeCatalog.GetType(entry.Attribute);
 
         if (double.TryParse(entry.Value, out double v))
         {
@@ -130,6 +137,8 @@ public class TcsLogParser : ILogParser
         entry.Device = device;
         entry.Attribute = attr;
         entry.Value = valuePart;
+        entry.AttributeType = AttributeCatalog.GetType(entry.Attribute);
+        entry.DeviceType = DeviceCatalog.GetType(entry.Device);
 
         if (double.TryParse(valuePart, out double v))
             entry.NumericValue = v;

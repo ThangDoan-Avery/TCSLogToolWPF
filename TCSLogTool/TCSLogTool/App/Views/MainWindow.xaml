@@ -38,7 +38,7 @@
               AutoGenerateColumns="True"/>
 
             <!-- AttributesPoint -->
-            <DataGrid Grid.Row="2"
+            <DataGrid Grid.Row="3"
               ItemsSource="{Binding AttributePoints}"
               AutoGenerateColumns="True"/>
 

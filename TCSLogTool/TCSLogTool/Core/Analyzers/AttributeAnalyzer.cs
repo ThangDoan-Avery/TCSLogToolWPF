@@ -31,6 +31,7 @@ public class AttributeAnalyzer
                 {
                     Device = log.Device,
                     Attribute = log.Attribute,
+                    DeviceType = log.DeviceType,
                     IsDiscrete = DetectDiscrete(log.Attribute)
                 };
 

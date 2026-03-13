@@ -1,4 +1,6 @@
-﻿namespace TCSLogTool.Domain.Entities;
+﻿using System.Security.AccessControl;
+
+namespace TCSLogTool.Domain.Entities;
 
 public class StateSegment
 {
@@ -11,4 +13,6 @@ public class StateSegment
     public DateTimeOffset End { get; set; }
 
     public TimeSpan Duration => End - Start;
+
+    public DeviceType DeviceType { get; set; } = DeviceType.Other;
 }

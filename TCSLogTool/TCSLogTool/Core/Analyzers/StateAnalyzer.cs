@@ -13,8 +13,7 @@ public class StateAnalyzer
 
         DateTimeOffset timelineStart = logs[0].Timestamp;
 
-        Dictionary<string, StateSegment> active =
-            new();
+        Dictionary<string, StateSegment> active = new();
 
         foreach (var log in logs)
         {
@@ -26,6 +25,8 @@ public class StateAnalyzer
 
             string device = log.Device;
 
+            DeviceType deviceType = log.DeviceType;
+
             string state = MapState(log.Value);
 
             if (!active.ContainsKey(device))
@@ -36,7 +37,8 @@ public class StateAnalyzer
                     Device = device,
                     State = "IDLE",
                     Start = timelineStart,
-                    End = log.Timestamp
+                    End = log.Timestamp,
+                    DeviceType = deviceType
                 };
 
                 result.Add(idle);
@@ -56,7 +58,8 @@ public class StateAnalyzer
             {
                 Device = device,
                 State = state,
-                Start = log.Timestamp
+                Start = log.Timestamp,
+                DeviceType = deviceType
             };
 
             active[device] = current;
@@ -69,9 +72,9 @@ public class StateAnalyzer
     {
         return value switch
         {
-            "-1" => "ERROR",
-            "0" => "CLOSE",
-            "1" => "OPEN",
+            "-1" => "Busy",
+            "0" => "Fault",
+            "1" => "Ready",
             _ => value
         };
     }
