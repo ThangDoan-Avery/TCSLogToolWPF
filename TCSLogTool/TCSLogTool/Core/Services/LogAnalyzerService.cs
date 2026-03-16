@@ -21,11 +21,11 @@ public class LogAnalyzerService
         this.parser = parser;
     }
 
-    public List<LogEntry> Load(string path)
+    public List<LogEntry> Load(IEnumerable<string> paths)
     {
         List<LogEntry> logs = new();
 
-        foreach (var line in reader.Read(path))
+        foreach (var line in reader.Read(paths))
         {
             var entry = parser.Parse(line);
 
@@ -50,5 +50,4 @@ public class LogAnalyzerService
     {
         return attributeAnalyzer.Analyze(logs);
     }
-
 }

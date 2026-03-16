@@ -2,5 +2,5 @@
 
 public interface ILogReader
 {
-    IEnumerable<string> Read(string path);
+    IEnumerable<string> Read(IEnumerable<string> paths);
 }

@@ -7,40 +7,57 @@
 
     <DockPanel>
 
-        <Button DockPanel.Dock="Top"
-                Content="Open Log"
-                Command="{Binding OpenFileCommand}" />
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <Button Content="Open Log"
+                    Command="{Binding OpenFileCommand}"
+                    Margin="5"/>
 
-        <DataGrid ItemsSource="{Binding Logs}"
-                  AutoGenerateColumns="True"/>
+            <TextBlock Text="Files:" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Statistics.FileCount}" Margin="5,0"/>
+
+            <TextBlock Text="Commands:" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Statistics.CommandCount}" Margin="5,0"/>
+
+            <TextBlock Text="Devices:" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Statistics.DeviceCount}" Margin="5,0"/>
+
+            <TextBlock Text="Start Time:" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Statistics.StartTime}" Margin="5,0"/>
+
+            <TextBlock Text="End Time:" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
+        </StackPanel>
 
         <Grid>
+
             <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
                 <RowDefinition Height="2*" />
                 <RowDefinition Height="2*" />
                 <RowDefinition Height="2*" />
                 <RowDefinition Height="2*" />
             </Grid.RowDefinitions>
 
-            <!-- Commands -->
+            <DataGrid  Grid.Row="4"
+                    ItemsSource="{Binding Logs}"
+                    AutoGenerateColumns="True"/>
+
+
             <DataGrid Grid.Row="0"
-              ItemsSource="{Binding Commands}"
-              AutoGenerateColumns="True"/>
+                    ItemsSource="{Binding Commands}"
+                    AutoGenerateColumns="True"/>
 
-            <!-- States -->
             <DataGrid Grid.Row="1"
-              ItemsSource="{Binding States}"
-              AutoGenerateColumns="True"/>
+                    ItemsSource="{Binding States}"
+                    AutoGenerateColumns="True"/>
 
-            <!-- Attributes -->
             <DataGrid Grid.Row="2"
-              ItemsSource="{Binding AttributeSeries}"
-              AutoGenerateColumns="True"/>
+                    ItemsSource="{Binding AttributeSeries}"
+                    AutoGenerateColumns="True"/>
 
-            <!-- AttributesPoint -->
             <DataGrid Grid.Row="3"
-              ItemsSource="{Binding AttributePoints}"
-              AutoGenerateColumns="True"/>
+                    ItemsSource="{Binding AttributePoints}"
+                    AutoGenerateColumns="True"/>
 
         </Grid>
     </DockPanel>
