@@ -1,0 +1,160 @@
+const DEVICES = [
+  {
+    id: 'EFEM-01',
+    type: 'EFEM Robot',
+    batch: 'batch-001',
+    lastState: 'ready',
+
+    segments: [
+      { s: 0, e: 5000, st: 'idle' },
+      { s: 5000, e: 7000, st: 'ready' },
+      { s: 7000, e: 55000, st: 'busy' },
+      { s: 55000, e: 90000, st: 'ready' }
+    ],
+
+    commands: [
+      { name: 'Init', s: 5000, e: 10000 },
+      { name: 'Home', s: 10000, e: 18000 },
+      { name: 'GetExtend', s: 18000, e: 35000 },
+      { name: 'GetRetract', s: 35000, e: 45000 },
+      { name: 'Cycle', s: 45000, e: 55000 }
+    ],
+
+    attrs: [
+      {
+        key: 'arm_speed',
+        label: 'Arm Speed',
+        unit: 'mm/s',
+        color: '#3b9eff',
+        min: 0,
+        max: 900,
+        series: [
+          { t: 0, v: 0 },
+          { t: 7000, v: 0 },
+          { t: 8000, v: 150 },
+          { t: 12000, v: 800 },
+          { t: 17000, v: 800 },
+          { t: 18000, v: 600 },
+          { t: 25000, v: 800 },
+          { t: 34000, v: 600 },
+          { t: 35000, v: 300 },
+          { t: 40000, v: 700 },
+          { t: 44000, v: 300 },
+          { t: 45000, v: 200 },
+          { t: 50000, v: 700 },
+          { t: 54000, v: 200 },
+          { t: 55000, v: 0 },
+          { t: 90000, v: 0 }
+        ]
+      },
+      {
+        key: 'torque',
+        label: 'Joint Torque',
+        unit: 'N·m',
+        color: '#f5a623',
+        min: 0,
+        max: 5,
+        series: [
+          { t: 0, v: 0.1 },
+          { t: 10000, v: 1.2 },
+          { t: 20000, v: 2.5 },
+          { t: 30000, v: 3.5 },
+          { t: 40000, v: 2.8 },
+          { t: 50000, v: 3.2 },
+          { t: 55000, v: 0.2 },
+          { t: 90000, v: 0.1 }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'EFEM-02',
+    type: 'EFEM Robot',
+    batch: 'batch-001',
+    lastState: 'ready',
+
+    segments: [
+      { s: 0, e: 5000, st: 'idle' },
+      { s: 5000, e: 7000, st: 'ready' },
+      { s: 7000, e: 38000, st: 'busy' },
+      { s: 38000, e: 52000, st: 'fault' },
+      { s: 52000, e: 62000, st: 'idle' },
+      { s: 62000, e: 90000, st: 'ready' }
+    ],
+
+    commands: [
+      { name: 'Init', s: 5000, e: 10000 },
+      { name: 'GetExtend', s: 10000, e: 38000 },
+      { name: 'Home', s: 52000, e: 60000 },
+      { name: 'Init', s: 60000, e: 65000 },
+      { name: 'GetExtend', s: 65000, e: 80000 }
+    ],
+
+    attrs: [
+      {
+        key: 'torque',
+        label: 'Joint Torque',
+        unit: 'N·m',
+        color: '#f5a623',
+        min: 0,
+        max: 6,
+        series: [
+          { t: 0, v: 0.1 },
+          { t: 10000, v: 1.5 },
+          { t: 25000, v: 3.0 },
+          { t: 35000, v: 5.0 },
+          { t: 37000, v: 5.5 },
+          { t: 38000, v: 0.2 },
+          { t: 52000, v: 0.2 },
+          { t: 62000, v: 1.0 },
+          { t: 70000, v: 2.5 },
+          { t: 80000, v: 2.8 },
+          { t: 90000, v: 0.1 }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'VAC-01',
+    type: 'Vacuum Chamber',
+    batch: 'batch-002',
+    lastState: 'ready',
+
+    segments: [
+      { s: 0, e: 6000, st: 'idle' },
+      { s: 6000, e: 8000, st: 'ready' },
+      { s: 8000, e: 65000, st: 'busy' },
+      { s: 65000, e: 90000, st: 'ready' }
+    ],
+
+    commands: [
+      { name: 'Init', s: 6000, e: 10000 },
+      { name: 'Batch', s: 10000, e: 55000 },
+      { name: 'TurnOff', s: 55000, e: 65000 }
+    ],
+
+    attrs: [
+      {
+        key: 'pressure',
+        label: 'Chamber Pressure',
+        unit: 'mTorr',
+        color: '#5b8ef5',
+        min: 0,
+        max: 800,
+        series: [
+          { t: 0, v: 760 },
+          { t: 8000, v: 600 },
+          { t: 14000, v: 120 },
+          { t: 22000, v: 8 },
+          { t: 35000, v: 1 },
+          { t: 54000, v: 0.7 },
+          { t: 62000, v: 80 },
+          { t: 65000, v: 760 },
+          { t: 90000, v: 760 }
+        ]
+      }
+    ]
+  }
+];

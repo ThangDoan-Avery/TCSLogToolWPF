@@ -592,7 +592,8 @@
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-    const TOTAL_S = 90;
+
+    //const TOTAL_S = 90 
 
     const STATE_COLOR = { idle: '#243050', ready: '#1fdb8a', busy: '#f5a623', fault: '#f04444' };
     const CMD_COLOR = {
@@ -607,8 +608,10 @@
     };
 
     // ── helpers ──────────────────────────────────────────────────────────────────
-    function pct(s) { return (s / TOTAL_S * 100).toFixed(4) + '%'; }
-    function pctW(s, e) { return ((e - s) / TOTAL_S * 100).toFixed(4) + '%'; }
+    //function pct(s) { return (s / TOTAL_S * 100).toFixed(4) + '%'; }
+    //function pctW(s, e) { return ((e - s) / TOTAL_S * 100).toFixed(4) + '%'; }
+    function pct(s) { return ((s - MIN_T) / TOTAL_S * 100) + '%'; }
+    function pctW(s, e) { return ((e - s) / TOTAL_S * 100) + '%'; }
 
     function genSeries(pts) {
       const out = [];
@@ -628,7 +631,8 @@
     }
     function lerp(series, t) {
       if (!series || !series.length) return 0;
-      t = Math.max(0, Math.min(TOTAL_S, t));
+      //t = Math.max(0, Math.min(TOTAL_S, t));
+      t = Math.max(MIN_T, Math.min(MAX_T, t));
       for (let i = 0; i < series.length - 1; i++) {
         if (t >= series[i].t && t <= series[i + 1].t) {
           const f = (t - series[i].t) / (series[i + 1].t - series[i].t);
@@ -639,157 +643,59 @@
     }
 
     // ── Data ─────────────────────────────────────────────────────────────────────
+    const BASE = new Date("2026-02-03T00:56:30.000Z").getTime();
+
     const DEVICES = [
-      {
-        id: 'EFEM-01', type: 'EFEM Robot', batch: 'batch-001', lastState: 'ready',
-        segments: [
-          { s: 0, e: 5, st: 'idle' }, { s: 5, e: 7, st: 'ready' }, { s: 7, e: 55, st: 'busy' }, { s: 55, e: 90, st: 'ready' }
-        ],
-        commands: [
-          { name: 'Init', s: 5, e: 10, lane: 0, note: 'Init axes & limits' },
-          { name: 'Home', s: 10, e: 18, lane: 0, note: 'Home all joints' },
-          { name: 'GetExtend', s: 18, e: 35, lane: 0, note: 'Extend to pick slot 12' },
-          { name: 'GetRetract', s: 35, e: 45, lane: 0, note: 'GetRetract with wafer' },
-          { name: 'Cycle', s: 45, e: 55, lane: 0, note: 'Cycle into process chamber' },
-        ],
-        attrs: [
-          {
-            key: 'arm_speed', label: 'Arm Speed', unit: 'mm/s', color: '#3b9eff',
-            series: noise(genSeries([
-              { t: 0, v: 0 }, { t: 7, v: 0 }, { t: 8, v: 150 }, { t: 12, v: 800 }, { t: 17, v: 800 },
-              { t: 18, v: 600 }, { t: 25, v: 800 }, { t: 34, v: 600 }, { t: 35, v: 300 },
-              { t: 40, v: 700 }, { t: 44, v: 300 }, { t: 45, v: 200 }, { t: 50, v: 700 }, { t: 54, v: 200 },
-              { t: 55, v: 0 }, { t: 90, v: 0 }
-            ]), 20), min: 0, max: 900, fmt: v => Math.round(v) + ''
-          },
-          {
-            key: 'torque', label: 'Joint Torque', unit: 'N·m', color: '#f5a623',
-            series: noise(genSeries([
-              { t: 0, v: 0.05 }, { t: 7, v: 0.05 }, { t: 10, v: 1.0 }, { t: 18, v: 2.8 },
-              { t: 25, v: 3.2 }, { t: 34, v: 2.5 }, { t: 35, v: 1.5 }, { t: 44, v: 2.8 },
-              { t: 45, v: 1.8 }, { t: 54, v: 2.5 }, { t: 55, v: 0.1 }, { t: 90, v: 0.05 }
-            ]), .15), min: 0, max: 4.5, fmt: v => v.toFixed(2)
-          },
-          {
-            key: 'pos_error', label: 'Position Error', unit: 'μm', color: '#f04444',
-            series: noise(genSeries([
-              { t: 0, v: 0 }, { t: 10, v: 2 }, { t: 18, v: 12 }, { t: 25, v: 8 }, { t: 34, v: 14 },
-              { t: 35, v: 6 }, { t: 44, v: 18 }, { t: 45, v: 8 }, { t: 54, v: 14 }, { t: 55, v: 1 }, { t: 90, v: 0 }
-            ]), 2), min: 0, max: 30, fmt: v => Math.round(v) + ''
-          },
-        ]
-      },
-      {
-        id: 'EFEM-02', type: 'EFEM Robot', batch: 'batch-001', lastState: 'ready',
-        segments: [
-          { s: 0, e: 5, st: 'idle' }, { s: 5, e: 7, st: 'ready' }, { s: 7, e: 38, st: 'busy' },
-          { s: 38, e: 52, st: 'fault' }, { s: 52, e: 62, st: 'idle' }, { s: 62, e: 90, st: 'ready' }
-        ],
-        commands: [
-          { name: 'Init', s: 5, e: 10, lane: 0, note: 'Init axes' },
-          { name: 'GetExtend', s: 10, e: 38, lane: 0, note: 'Extend → torque limit at 36s' },
-          { name: 'Home', s: 52, e: 60, lane: 0, note: 'Recovery home' },
-          { name: 'Init', s: 60, e: 65, lane: 0, note: 'Re-init after fault clear' },
-          { name: 'GetExtend', s: 65, e: 80, lane: 0, note: 'Retry extend' },
-        ],
-        attrs: [
-          {
-            key: 'arm_speed', label: 'Arm Speed', unit: 'mm/s', color: '#3b9eff',
-            series: noise(genSeries([
-              { t: 0, v: 0 }, { t: 7, v: 0 }, { t: 10, v: 600 }, { t: 25, v: 750 }, { t: 35, v: 300 },
-              { t: 37, v: 0 }, { t: 52, v: 0 }, { t: 60, v: 200 }, { t: 65, v: 0 }, { t: 67, v: 500 }, { t: 79, v: 400 }, { t: 80, v: 0 }, { t: 90, v: 0 }
-            ]), 25), min: 0, max: 900, fmt: v => Math.round(v) + ''
-          },
-          {
-            key: 'torque', label: 'Joint Torque', unit: 'N·m', color: '#f5a623',
-            series: noise(genSeries([
-              { t: 0, v: 0.05 }, { t: 10, v: 1.5 }, { t: 25, v: 2.8 }, { t: 35, v: 4.5 },
-              { t: 36, v: 5.0 }, { t: 37, v: 5.2 }, { t: 38, v: 0.05 }, { t: 52, v: 0.05 },
-              { t: 62, v: 1.2 }, { t: 67, v: 2.5 }, { t: 79, v: 2.8 }, { t: 80, v: 0.1 }, { t: 90, v: 0.05 }
-            ]), .18), min: 0, max: 5.8, fmt: v => v.toFixed(2)
-          },
-          {
-            key: 'pos_error', label: 'Position Error', unit: 'μm', color: '#f04444',
-            series: noise(genSeries([
-              { t: 0, v: 0 }, { t: 10, v: 8 }, { t: 25, v: 15 }, { t: 35, v: 40 }, { t: 37, v: 68 },
-              { t: 38, v: 0 }, { t: 52, v: 0 }, { t: 65, v: 5 }, { t: 79, v: 12 }, { t: 80, v: 1 }, { t: 90, v: 0 }
-            ]), 3), min: 0, max: 80, fmt: v => Math.round(v) + ''
-          },
-        ]
-      },
-      {
-        id: 'VAC-01', type: 'Vacuum Chamber', batch: 'batch-002', lastState: 'ready',
-        segments: [
-          { s: 0, e: 6, st: 'idle' }, { s: 6, e: 8, st: 'ready' }, { s: 8, e: 65, st: 'busy' }, { s: 65, e: 90, st: 'ready' }
-        ],
-        commands: [
-          { name: 'Init', s: 6, e: 10, lane: 0, note: 'Init vacuum system' },
-          { name: 'Batch', s: 10, e: 55, lane: 0, note: 'Roughing → turbo pump' },
-          { name: 'Open', s: 10, e: 13, lane: 1, note: 'Open gate valve (parallel)' },
-          { name: 'TurnOff', s: 55, e: 65, lane: 0, note: 'Controlled vent' },
-          { name: 'Close', s: 55, e: 58, lane: 1, note: 'Close gate valve' },
-        ],
-        attrs: [
-          {
-            key: 'pressure', label: 'Chamber Pressure', unit: 'mTorr', color: '#5b8ef5',
-            series: noise(genSeries([
-              { t: 0, v: 760 }, { t: 6, v: 755 }, { t: 8, v: 600 }, { t: 14, v: 120 },
-              { t: 22, v: 8 }, { t: 35, v: 0.9 }, { t: 54, v: 0.65 }, { t: 55, v: 0.65 },
-              { t: 58, v: 2 }, { t: 62, v: 80 }, { t: 65, v: 760 }, { t: 90, v: 760 }
-            ]), 2), min: 0, max: 800, fmt: v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v) + ''
-          },
-          {
-            key: 'pump_speed', label: 'Batch Speed', unit: '%', color: '#1fdb8a',
-            series: noise(genSeries([
-              { t: 0, v: 0 }, { t: 8, v: 0 }, { t: 10, v: 20 }, { t: 14, v: 100 },
-              { t: 54, v: 100 }, { t: 55, v: 60 }, { t: 62, v: 20 }, { t: 65, v: 0 }, { t: 90, v: 0 }
-            ]), 1), min: 0, max: 110, fmt: v => Math.round(v) + '%'
-          },
-          {
-            key: 'temp', label: 'Wall Temp', unit: '°C', color: '#f5a623',
-            series: noise(genSeries([
-              { t: 0, v: 22 }, { t: 8, v: 22 }, { t: 20, v: 23.5 }, { t: 40, v: 25.2 },
-              { t: 55, v: 26.1 }, { t: 65, v: 26.0 }, { t: 80, v: 24.5 }, { t: 90, v: 23 }
-            ]), .3), min: 18, max: 32, fmt: v => v.toFixed(1)
-          },
-          {
-            key: 'gate_valve', label: 'Gate Valve', unit: '%open', color: '#c084fc',
-            series: genSeries([
-              { t: 0, v: 0 }, { t: 9.9, v: 0 }, { t: 10, v: 100 }, { t: 54.9, v: 100 },
-              { t: 55, v: 0 }, { t: 90, v: 0 }
-            ]), min: 0, max: 110, fmt: v => Math.round(v) + '%'
-          },
-        ]
-      },
-      {
-        id: 'LP-A1', type: 'LoadPort', batch: 'batch-001', lastState: 'ready',
-        segments: [
-          { s: 0, e: 8, st: 'idle' }, { s: 8, e: 10, st: 'ready' }, { s: 10, e: 38, st: 'busy' }, { s: 38, e: 90, st: 'ready' }
-        ],
-        commands: [
-          { name: 'Init', s: 8, e: 13, lane: 0, note: 'Init loadport' },
-          { name: 'Open', s: 13, e: 22, lane: 0, note: 'Open door & dock FOUP' },
-          { name: 'MoveToPos', s: 22, e: 33, lane: 0, note: 'MoveToPos 25 slots' },
-          { name: 'Close', s: 33, e: 38, lane: 0, note: 'Close door' },
-        ],
-        attrs: [
-          {
-            key: 'door_pos', label: 'Door Position', unit: '%', color: '#1fdb8a',
-            series: genSeries([
-              { t: 0, v: 100 }, { t: 12.9, v: 100 }, { t: 13, v: 95 }, { t: 15, v: 0 },
-              { t: 32.9, v: 0 }, { t: 33, v: 5 }, { t: 35, v: 100 }, { t: 90, v: 100 }
-            ]), min: 0, max: 110, fmt: v => Math.round(v) + '%'
-          },
-          {
-            key: 'vibration', label: 'Vibration RMS', unit: 'mg', color: '#f5a623',
-            series: noise(genSeries([
-              { t: 0, v: 0.2 }, { t: 13, v: 0.4 }, { t: 14, v: 9 }, { t: 16, v: 2 },
-              { t: 32, v: 1.8 }, { t: 33, v: 10 }, { t: 35, v: 1 }, { t: 90, v: 0.2 }
-            ]), .3), min: 0, max: 14, fmt: v => v.toFixed(1)
-          },
-        ]
-      },
+    {
+      id: 'EFEM-01',
+      type: 'EFEM Robot',
+      batch: 'batch-001',
+      lastState: 'ready',
+      segments: [
+        { s: BASE + 0, e: BASE + 5000, st: 'idle' },
+        { s: BASE + 5000, e: BASE + 7000, st: 'ready' },
+        { s: BASE + 7000, e: BASE + 55000, st: 'busy' },
+        { s: BASE + 55000, e: BASE + 90000, st: 'ready' }
+      ],
+      commands: [
+        { name: 'Init', s: BASE + 5000, e: BASE + 10000, lane: 0, note: '' },
+        { name: 'Home', s: BASE + 10000, e: BASE + 18000, lane: 0, note: '' },
+        { name: 'GetExtend', s: BASE + 18000, e: BASE + 35000, lane: 0, note: '' },
+        { name: 'GetRetract', s: BASE + 35000, e: BASE + 45000, lane: 0, note: '' },
+        { name: 'Cycle', s: BASE + 45000, e: BASE + 55000, lane: 0, note: '' }
+      ],
+      attrs: [
+        {
+          key: 'arm_speed',
+          label: 'Arm Speed',
+          unit: 'mm/s',
+          color: '#3b9eff',
+          series: [
+            { t: BASE + 0, v: 0 },
+            { t: BASE + 10000, v: 800 },
+            { t: BASE + 20000, v: 600 },
+            { t: BASE + 40000, v: 700 },
+            { t: BASE + 55000, v: 0 }
+          ],
+          min: 0,
+          max: 900,
+          fmt: v => Math.round(v)
+        }
+      ]
+    }
     ];
+    
+    const ALL_TIMES = [];
+
+    DEVICES.forEach(d => {
+      d.segments.forEach(s => { ALL_TIMES.push(s.s, s.e); });
+      d.commands.forEach(c => { ALL_TIMES.push(c.s, c.e); });
+      d.attrs.forEach(a => a.series.forEach(p => ALL_TIMES.push(p.t)));
+    });
+
+    const MIN_T = Math.min(...ALL_TIMES);
+    const MAX_T = Math.max(...ALL_TIMES);
+    const TOTAL_S = MAX_T - MIN_T; 
 
     // ── State ─────────────────────────────────────────────────────────────────────
     let selectedDevice = DEVICES[0];
@@ -813,10 +719,18 @@
     // ── Timeline ──────────────────────────────────────────────────────────────────
     function buildAxis() {
       const ax = document.getElementById('time-axis'); ax.innerHTML = '';
-      for (let t = 0; t <= TOTAL_S; t += 15) {
-        const d = document.createElement('div'); d.className = 'tick';
-        d.textContent = t === 0 ? '0' : '+' + t + 's'; ax.appendChild(d);
+      const step = (MAX_T - MIN_T) / 6;
+      for (let i = 0; i <= 6; i++) {
+        const t = MIN_T + step * i;
+        const d = document.createElement('div');
+        d.className = 'tick';
+        d.textContent = fmtTime(t);
+        ax.appendChild(d);
       }
+      //for (let t = 0; t <= TOTAL_S; t += 15) {
+      //  const d = document.createElement('div'); d.className = 'tick';
+      //  d.textContent = t === 0 ? '0' : '+' + t + 's'; ax.appendChild(d);
+      //}
     }
 
     function buildTimeline() {
@@ -893,8 +807,8 @@
       tt.innerHTML = `
     <div class="tt-title" style="color:${color}">${cmd.name}</div>
     <div class="tt-row"><span class="tt-label">Device</span><span class="tt-val">${dev.id}</span></div>
-    <div class="tt-row"><span class="tt-label">Start</span><span class="tt-val">${cmd.s}s</span></div>
-    <div class="tt-row"><span class="tt-label">End</span><span class="tt-val">${cmd.e}s</span></div>
+    <div class="tt-row"><span class="tt-label">Start</span><span class="tt-val">${fmtTime(cmd.s)}</span></div>
+    <div class="tt-row"><span class="tt-label">End</span><span class="tt-val">${(cmd.e - cmd.s).toFixed(0)} ms</span></div>
     <div class="tt-row"><span class="tt-label">Duration</span><span class="tt-val" style="color:${color}">${cmd.e - cmd.s}s</span></div>
     ${cmd.lane > 0 ? '<div class="tt-row"><span class="tt-label">Lane</span><span class="tt-val">Parallel</span></div>' : ''}
     <div style="font-size:10px;color:var(--muted2);margin-top:7px">${cmd.note}</div>
@@ -920,11 +834,13 @@
       const rect = tlWrap.getBoundingClientRect();
       const trackW = rect.width - LABEL_W - RIGHT_PAD;
       const x = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
-      hoverT = (x / trackW) * TOTAL_S;
+      //hoverT = (x / trackW) * TOTAL_S;
+      hoverT = MIN_T + (x / trackW) * TOTAL_S;
       tlCursor.style.display = 'block';
       tlCursor.style.left = (LABEL_W + x) + 'px';
       tlCursor.style.top = '32px'; tlCursor.style.bottom = '0';
-      cursorLbl.textContent = hoverT.toFixed(1) + 's';
+      //cursorLbl.textContent = hoverT.toFixed(1) + 's';
+      cursorLbl.textContent = fmtTime(hoverT);
       updateInfoBar(hoverT);
       updateChartCursors(hoverT);
     });
@@ -997,7 +913,8 @@
       // state bands background
       dev.segments.forEach(seg => {
         ctx.fillStyle = STATE_COLOR[seg.st] + '18';
-        ctx.fillRect((seg.s / TOTAL_S) * W, 0, ((seg.e - seg.s) / TOTAL_S) * W, H);
+        //ctx.fillRect((seg.s / TOTAL_S) * W, 0, ((seg.e - seg.s) / TOTAL_S) * W, H);
+        ctx.fillRect(((seg.s - MIN_T) / TOTAL_S) * W, 0, ((seg.e - seg.s) / TOTAL_S) * W, H);
       });
 
       // highlight command band
@@ -1005,12 +922,14 @@
         dev.commands.filter(c => c.name === highlightCmd).forEach(cmd => {
           const color = CMD_COLOR[cmd.name] || '#888';
           ctx.fillStyle = color + '28';
-          ctx.fillRect((cmd.s / TOTAL_S) * W, 0, ((cmd.e - cmd.s) / TOTAL_S) * W, H);
+          //ctx.fillRect((cmd.s / TOTAL_S) * W, 0, ((cmd.e - cmd.s) / TOTAL_S) * W, H);
+          ctx.fillRect(((cmd.s - MIN_T) / TOTAL_S) * W, 0, ((cmd.e - cmd.s) / TOTAL_S) * W, H);
           ctx.strokeStyle = color + '80';
           ctx.lineWidth = 1;
           ctx.setLineDash([3, 3]);
           [[cmd.s], [cmd.e]].forEach(([t]) => {
-            const x = (t / TOTAL_S) * W;
+              //const x = (t / TOTAL_S) * W;
+            const x = ((t - MIN_T) / TOTAL_S) * W;
             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
           });
           ctx.setLineDash([]);
@@ -1029,7 +948,9 @@
       // area fill
       ctx.beginPath();
       attr.series.forEach((p, i) => {
-        const x = (p.t / TOTAL_S) * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
+        //const x = hoverT = MIN_T + (x / trackW) * TOTAL_S; * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
+        const x = ((p.t - MIN_T) / TOTAL_S) * W;
+        const y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
         if (i === 0) { ctx.moveTo(x, H); ctx.lineTo(x, y); } else ctx.lineTo(x, y);
       });
       const lx = (attr.series[attr.series.length - 1].t / TOTAL_S) * W;
@@ -1042,7 +963,9 @@
       ctx.beginPath(); ctx.strokeStyle = attr.color; ctx.lineWidth = 1.5;
       ctx.shadowColor = attr.color; ctx.shadowBlur = 3;
       attr.series.forEach((p, i) => {
-        const x = (p.t / TOTAL_S) * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
+        //const x = hoverT = MIN_T + (x / trackW) * TOTAL_S; * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
+        const x = ((p.t - MIN_T) / TOTAL_S) * W;
+        const y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke(); ctx.shadowBlur = 0;
@@ -1054,17 +977,24 @@
         [[cmd.s, color], [cmd.e, 'rgba(160,176,200,.3)']].forEach(([t, c]) => {
           if (t > TOTAL_S) return;
           ctx.strokeStyle = c;
-          const x = (t / TOTAL_S) * W;
+          //const x = (t / TOTAL_S) * W;
+          const x = ((t - MIN_T) / TOTAL_S) * W;
           ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
         });
         ctx.setLineDash([]);
         // label
         if (cmd.lane === 0 && cmd.e - cmd.s >= 5) {
-          const cx = (cmd.s / TOTAL_S) * W + 4;
+          //const cx = (cmd.s / TOTAL_S) * W + 4;
+          const cx = ((cmd.s - MIN_T) / TOTAL_S) * W + 4;
           ctx.fillStyle = color + 'cc'; ctx.font = '8px JetBrains Mono';
           ctx.fillText(cmd.name, cx, 9);
         }
       });
+    }
+
+    function fmtTime(ts) {
+      const d = new Date(ts);
+      return d.toISOString().substr(11, 12);
     }
 
     function updateChartCursors(t) {
@@ -1077,7 +1007,8 @@
         if (!cc || !cv) return;
         const rect = cv.parentElement.getBoundingClientRect();
         const W = rect.width, H = rect.height || 55;
-        const x = (t / TOTAL_S) * W;
+        //const x = (t / TOTAL_S) * W;
+        const x = ((t - MIN_T) / TOTAL_S) * W;
         const val = lerp(attr.series, t);
         const y = H - ((val - attr.min) / (attr.max - attr.min)) * H;
         cc.style.display = 'block'; cc.style.left = x + 'px';
@@ -1090,7 +1021,7 @@
       selectedDevice.attrs.forEach(attr => {
         const cc = document.getElementById('cc-' + attr.key);
         const cd = document.getElementById('cd-' + attr.key);
-        if (cc) cc.style.display = 'none';
+        if (cc) cc.style.display = 'none';  
         if (cd) cd.style.display = 'none';
         const yv = document.getElementById('yv-' + attr.key);
         if (yv) yv.textContent = attr.fmt(lerp(attr.series, 0));
