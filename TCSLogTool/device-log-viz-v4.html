@@ -181,20 +181,27 @@
       position: relative;
       cursor: crosshair;
       overflow-x: auto;
+      overflow-y: hidden;
     }
 
     .time-axis {
-      display: flex;
-      margin-left: 120px;
-      margin-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 3px;
+      display: grid;
+      grid-template-columns: 120px 1fr;
     }
 
     .tick {
       flex: 1;
       font-size: 9px;
       color: var(--muted);
+      text-align: center;
+    }
+
+    .tick:first-child {
+      text-align: left;
+    }
+
+    .tick:last-child {
+      text-align: right;
     }
 
     /* Device group */
@@ -214,11 +221,19 @@
       border-radius: 0 3px 3px 0;
       display: inline-block;
     }
+    .batch-lbl {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+    }
+
+    .batch-lbl::before {
+      content: '';
+    }
 
     .dev-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 120px 1fr;
       align-items: center;
-      margin-bottom: 3px;
     }
 
     .dev-label {
@@ -227,11 +242,8 @@
       padding-right: 8px;
       display: flex;
       flex-direction: column;
-
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      background: var(--surface);
+      width: auto;
+      min-width: unset;
     }
 
     .dev-name {
@@ -256,10 +268,8 @@
       align-items: center;
       justify-content: flex-end;
 
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      background: var(--surface);
+      width: auto;
+      min-width: unset;
     }
 
     .dev-label,
@@ -268,10 +278,10 @@
     }
 
     .track {
-      flex: 1;
       position: relative;
-      border-radius: 3px;
-      min-width: 400px;
+      width: 100%;
+      min-width: unset;
+      overflow: hidden;
     }
 
     .state-track {
@@ -801,15 +811,27 @@
 
     // ── Timeline ──────────────────────────────────────────────────────────────────
     function buildAxis() {
-      const ax = document.getElementById('time-axis'); ax.innerHTML = '';
+      const ax = document.getElementById('time-axis');
+      ax.innerHTML = '';
+
+      const empty = document.createElement('div');
+      ax.appendChild(empty);
+
+      const ticksWrap = document.createElement('div');
+      ticksWrap.style.display = 'flex';
+      ticksWrap.style.width = '100%';
+      ax.appendChild(ticksWrap);
+
       const step = (VIEW_END - VIEW_START) / 6;
 
       for (let i = 0; i <= 6; i++) {
         const t = VIEW_START + step * i;
+
         const d = document.createElement('div');
         d.className = 'tick';
+        d.style.flex = '1';
         d.textContent = fmtTime(t);
-        ax.appendChild(d);
+        ticksWrap.appendChild(d);
       }
     }
 
@@ -918,7 +940,8 @@
       e.preventDefault();
 
       const rect = tlWrap.getBoundingClientRect();
-      const LABEL_W = 120 + 14;
+      const labelEl = document.querySelector('.dev-label');
+      const LABEL_W = labelEl ? labelEl.getBoundingClientRect().width : 120;
       const RIGHT_PAD = 14;
       const trackW = rect.width - LABEL_W - RIGHT_PAD;
 
@@ -981,7 +1004,8 @@
       lastX = e.clientX;
 
       const rect = tlWrap.getBoundingClientRect();
-      const LABEL_W = 120 + 14;
+      const labelEl = document.querySelector('.dev-label');
+      const LABEL_W = labelEl ? labelEl.getBoundingClientRect().width : 120;
       const RIGHT_PAD = 14;
       const trackW = rect.width - LABEL_W - RIGHT_PAD;
 
@@ -1007,7 +1031,9 @@
 
     const tlCursor = document.getElementById('tl-cursor');
     const cursorLbl = document.getElementById('cursor-lbl');
-    const LABEL_W = 120 + 14, RIGHT_PAD = 14;
+    const RIGHT_PAD = 14;
+    const labelEl = document.querySelector('.dev-label');
+    const LABEL_W = labelEl ? labelEl.getBoundingClientRect().width : 120;
 
     tlWrap.addEventListener('mousemove', e => {
       const rect = tlWrap.getBoundingClientRect();
@@ -1258,7 +1284,6 @@
         cd.style.display = 'block';
         cd.style.left = x + 'px';
         cd.style.top = y + 'px';
-        cc.style.display = 'block';
         cd.title = p.label ?? p.v;
         cc.style.display = 'block';
         cc.style.left = x + 'px';
