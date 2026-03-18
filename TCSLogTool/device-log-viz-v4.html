@@ -549,6 +549,7 @@
       <h1>⬡ Device Command Log — Full Stack</h1>
       <div class="sub">State · Commands · Attribute Time-series · Synchronized Cursor</div>
     </div>
+    <input type="file" id="fileInput" />
   </header>
 
   <!-- Device tabs -->
@@ -613,22 +614,24 @@
     function pct(s) { return ((s - MIN_T) / TOTAL_S * 100) + '%'; }
     function pctW(s, e) { return ((e - s) / TOTAL_S * 100) + '%'; }
 
-    function genSeries(pts) {
-      const out = [];
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i], p1 = pts[i + 1];
-        const steps = Math.round((p1.t - p0.t) / 0.4);
-        for (let s = 0; s <= steps; s++) {
-          const f = s / steps, sf = f * f * (3 - 2 * f);
-          out.push({ t: p0.t + (p1.t - p0.t) * f, v: p0.v + (p1.v - p0.v) * sf });
-        }
-      }
-      out.push(pts[pts.length - 1]);
-      return out;
-    }
-    function noise(series, amp) {
-      return series.map(p => ({ t: p.t, v: p.v + (Math.random() - .5) * amp }));
-    }
+    // function genSeries(pts) {
+    //   const out = [];
+    //   for (let i = 0; i < pts.length - 1; i++) {
+    //     const p0 = pts[i], p1 = pts[i + 1];
+    //     const steps = Math.round((p1.t - p0.t) / 0.4);
+    //     for (let s = 0; s <= steps; s++) {
+    //       const f = s / steps, sf = f * f * (3 - 2 * f);
+    //       out.push({ t: p0.t + (p1.t - p0.t) * f, v: p0.v + (p1.v - p0.v) * sf });
+    //     }
+    //   }
+    //   out.push(pts[pts.length - 1]);
+    //   return out;
+    // }
+
+    // function noise(series, amp) {
+    //   return series.map(p => ({ t: p.t, v: p.v + (Math.random() - .5) * amp }));
+    // }
+
     function lerp(series, t) {
       if (!series || !series.length) return 0;
       //t = Math.max(0, Math.min(TOTAL_S, t));
@@ -641,6 +644,12 @@
       }
       return series[series.length - 1].v;
     }
+    
+    function formatDuration(ms) {
+      if (ms < 1000) return ms + ' ms';
+      if (ms < 60000) return (ms / 1000).toFixed(2) + ' s';
+      return (ms / 60000).toFixed(2) + ' min';
+    }
 
     // ── Data ─────────────────────────────────────────────────────────────────────
     const BASE = new Date("2026-02-03T00:56:30.000Z").getTime();
@@ -652,17 +661,17 @@
       batch: 'batch-001',
       lastState: 'ready',
       segments: [
-        { s: BASE + 0, e: BASE + 5000, st: 'idle' },
-        { s: BASE + 5000, e: BASE + 7000, st: 'ready' },
-        { s: BASE + 7000, e: BASE + 55000, st: 'busy' },
-        { s: BASE + 55000, e: BASE + 90000, st: 'ready' }
+        { s: BASE + 4997, e: BASE + 5000, st: 'idle' },
+        { s: BASE + 5000, e: BASE + 5030, st: 'ready' },
+        { s: BASE + 5030, e: BASE + 5040, st: 'busy' },
+        { s: BASE + 5050, e: BASE + 5060, st: 'ready' }
       ],
       commands: [
-        { name: 'Init', s: BASE + 5000, e: BASE + 10000, lane: 0, note: '' },
-        { name: 'Home', s: BASE + 10000, e: BASE + 18000, lane: 0, note: '' },
-        { name: 'GetExtend', s: BASE + 18000, e: BASE + 35000, lane: 0, note: '' },
-        { name: 'GetRetract', s: BASE + 35000, e: BASE + 45000, lane: 0, note: '' },
-        { name: 'Cycle', s: BASE + 45000, e: BASE + 55000, lane: 0, note: '' }
+        { name: 'Init', s: BASE + 5000, e: BASE + 5020, lane: 0, note: '' },
+        { name: 'Home', s: BASE + 5020, e: BASE + 5025, lane: 0, note: '' },
+        { name: 'GetExtend', s: BASE + 5025, e: BASE + 5026, lane: 0, note: '' },
+        { name: 'GetRetract', s: BASE + 5026, e: BASE + 5029, lane: 0, note: '' },
+        { name: 'Cycle', s: BASE + 5029, e: BASE + 5032, lane: 0, note: '' }
       ],
       attrs: [
         {
@@ -671,20 +680,21 @@
           unit: 'mm/s',
           color: '#3b9eff',
           series: [
-            { t: BASE + 0, v: 0 },
-            { t: BASE + 10000, v: 800 },
-            { t: BASE + 20000, v: 600 },
-            { t: BASE + 40000, v: 700 },
-            { t: BASE + 55000, v: 0 }
+            { t: BASE + 4999, v: 1 },
+            { t: BASE + 5000, v: 2 },
+            { t: BASE + 5020, v: 0 },
+            { t: BASE + 5024, v: 1.3232 },
+            { t: BASE + 5030, v: 0 }
           ],
           min: 0,
-          max: 900,
-          fmt: v => Math.round(v)
+          max: 2,
+          // fmt: v => Math.round(v)
+          fmt: v => v
         }
       ]
     }
     ];
-    
+    console.log(DEVICES);
     const ALL_TIMES = [];
 
     DEVICES.forEach(d => {
@@ -702,6 +712,10 @@
     let activeAttrs = new Set(DEVICES[0].attrs.map(a => a.key));
     let hoverT = null;
     let highlightCmd = null; // command name to highlight on charts
+    
+    // ── Input file JSON ─────────────────────────────────────────────────────────────────────
+
+
 
     // ── Tabs ──────────────────────────────────────────────────────────────────────
     function buildTabs() {
@@ -800,16 +814,19 @@
       wrap.innerHTML = html;
     }
 
+
     // ── Tooltip ───────────────────────────────────────────────────────────────────
     function showCmdTooltip(e, dev, cmd) {
+      // const durMs = cmd.e - cmd.s;
+      // const durSec = (durMs / 1000).toFixed(2);
       const tt = document.getElementById('tooltip');
       const color = CMD_COLOR[cmd.name] || '#888';
       tt.innerHTML = `
     <div class="tt-title" style="color:${color}">${cmd.name}</div>
     <div class="tt-row"><span class="tt-label">Device</span><span class="tt-val">${dev.id}</span></div>
     <div class="tt-row"><span class="tt-label">Start</span><span class="tt-val">${fmtTime(cmd.s)}</span></div>
-    <div class="tt-row"><span class="tt-label">End</span><span class="tt-val">${(cmd.e - cmd.s).toFixed(0)} ms</span></div>
-    <div class="tt-row"><span class="tt-label">Duration</span><span class="tt-val" style="color:${color}">${cmd.e - cmd.s}s</span></div>
+    <div class="tt-row"><span class="tt-label">End</span><span class="tt-val">${fmtTime(cmd.e)}</span></div>
+    <div class="tt-row"><span class="tt-label">Duration</span><span class="tt-val">${formatDuration(cmd.e - cmd.s)}</span></div>
     ${cmd.lane > 0 ? '<div class="tt-row"><span class="tt-label">Lane</span><span class="tt-val">Parallel</span></div>' : ''}
     <div style="font-size:10px;color:var(--muted2);margin-top:7px">${cmd.note}</div>
     <div style="font-size:9px;color:var(--muted);margin-top:4px">Click → highlight on charts →</div>
@@ -854,7 +871,7 @@
     function getCmdsAt(dev, t) { return dev.commands.filter(c => t >= c.s && t <= c.e); }
 
     function updateInfoBar(t) {
-      let html = `<span style="color:var(--muted2)">${t.toFixed(1)}s</span>`;
+      let html = `<span style="color:var(--muted2)">${fmtTime(t)}</span>`;
       DEVICES.forEach(dev => {
         const st = getStateAt(dev, t);
         const cmds = getCmdsAt(dev, t);
@@ -886,7 +903,7 @@
       const cs = document.getElementById('charts-section'); cs.innerHTML = '';
       dev.attrs.filter(a => activeAttrs.has(a.key)).forEach(attr => {
         const row = document.createElement('div'); row.className = 'chart-row';
-        const curVal = lerp(attr.series, hoverT !== null ? hoverT : 0);
+        const curVal = lerp(attr.series, hoverT !== null ? hoverT : MIN_T);
         const yl = document.createElement('div'); yl.className = 'chart-ylabel';
         yl.innerHTML = `<div class="yn">${attr.label}</div><div class="yv" style="color:${attr.color}" id="yv-${attr.key}">${attr.fmt(curVal)}</div><div class="yu">${attr.unit}</div>`;
         row.appendChild(yl);
@@ -953,7 +970,8 @@
         const y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
         if (i === 0) { ctx.moveTo(x, H); ctx.lineTo(x, y); } else ctx.lineTo(x, y);
       });
-      const lx = (attr.series[attr.series.length - 1].t / TOTAL_S) * W;
+      // const lx = (attr.series[attr.series.length - 1].t / TOTAL_S) * W;
+      const lx = ((attr.series[attr.series.length - 1].t - MIN_T) / TOTAL_S) * W;
       ctx.lineTo(lx, H); ctx.closePath();
       const grad = ctx.createLinearGradient(0, 0, 0, H);
       grad.addColorStop(0, attr.color + '38'); grad.addColorStop(1, attr.color + '00');
@@ -975,7 +993,7 @@
         const color = CMD_COLOR[cmd.name] || '#888';
         ctx.strokeStyle = color + '60'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
         [[cmd.s, color], [cmd.e, 'rgba(160,176,200,.3)']].forEach(([t, c]) => {
-          if (t > TOTAL_S) return;
+          if (t > MAX_T) return;
           ctx.strokeStyle = c;
           //const x = (t / TOTAL_S) * W;
           const x = ((t - MIN_T) / TOTAL_S) * W;
