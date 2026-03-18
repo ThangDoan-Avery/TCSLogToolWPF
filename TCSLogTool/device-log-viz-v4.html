@@ -227,6 +227,11 @@
       padding-right: 8px;
       display: flex;
       flex-direction: column;
+
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: var(--surface);
     }
 
     .dev-name {
@@ -250,6 +255,16 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
+
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: var(--surface);
+    }
+
+    .dev-label,
+    .row-sublabel {
+      backdrop-filter: blur(4px);
     }
 
     .track {
@@ -594,12 +609,10 @@
 
   <script>
 
-    //const TOTAL_S = 90 
-
-    const STATE_COLOR = { idle: '#243050', ready: '#1fdb8a', busy: '#f5a623', fault: '#f04444' };
+    const STATE_COLOR = { IDLE: '#243050', Ready: '#1fdb8a', Busy: '#f5a623', Fault: '#f04444' };
     const CMD_COLOR = {
-      Init: '#7c5cfc', Home: '#3b9eff', GetExtend: '#1fdb8a', GetRetract: '#f5a623', Stop: "#9f2626", 
-      Open: '#38d9f5', Close: '#f0724a', MoveToPos: '#e879f9', Batch: '#a3e635', TurnOff: '#fb923c', 
+      Init: '#7c5cfc', Home: '#3b9eff', GetExtend: '#1fdb8a', GetRetract: '#f5a623', Stop: "#9f2626",
+      Open: '#38d9f5', Close: '#f0724a', MoveToPos: '#e879f9', Batch: '#a3e635', TurnOff: '#fb923c',
       SetPressure: '#facc15', SetPosition: '#60a5fa', Cycle: '#34d399', GetWaf: '#2dd4bf', PutWaf: '#10b981',
       GetWafPrePos: '#059669', PutWafPrePos: '#047857', ExchgWaf: '#f472b6', MovToLoc: '#ec4899', PutExtend: '#14b8a6',
       GetRetractPrePos: '#f97316', PutRetractPrePos: '#ea580c', PutRetract: '#c2410c', BRbtMov: '#8b5cf6', TchPos: '#d946ef',
@@ -609,33 +622,12 @@
     };
 
     // ── helpers ──────────────────────────────────────────────────────────────────
-    //function pct(s) { return (s / TOTAL_S * 100).toFixed(4) + '%'; }
-    //function pctW(s, e) { return ((e - s) / TOTAL_S * 100).toFixed(4) + '%'; }
-    function pct(s) { return ((s - MIN_T) / TOTAL_S * 100) + '%'; }
-    function pctW(s, e) { return ((e - s) / TOTAL_S * 100) + '%'; }
-
-    // function genSeries(pts) {
-    //   const out = [];
-    //   for (let i = 0; i < pts.length - 1; i++) {
-    //     const p0 = pts[i], p1 = pts[i + 1];
-    //     const steps = Math.round((p1.t - p0.t) / 0.4);
-    //     for (let s = 0; s <= steps; s++) {
-    //       const f = s / steps, sf = f * f * (3 - 2 * f);
-    //       out.push({ t: p0.t + (p1.t - p0.t) * f, v: p0.v + (p1.v - p0.v) * sf });
-    //     }
-    //   }
-    //   out.push(pts[pts.length - 1]);
-    //   return out;
-    // }
-
-    // function noise(series, amp) {
-    //   return series.map(p => ({ t: p.t, v: p.v + (Math.random() - .5) * amp }));
-    // }
+    function pct(s) { return ((s - VIEW_START) / (VIEW_END - VIEW_START) * 100) + '%'; }
+    function pctW(s, e) { return ((e - s) / (VIEW_END - VIEW_START) * 100) + '%'; }
 
     function lerp(series, t) {
       if (!series || !series.length) return 0;
-      //t = Math.max(0, Math.min(TOTAL_S, t));
-      t = Math.max(MIN_T, Math.min(MAX_T, t));
+      t = Math.max(VIEW_START, Math.min(VIEW_END, t));
       for (let i = 0; i < series.length - 1; i++) {
         if (t >= series[i].t && t <= series[i + 1].t) {
           const f = (t - series[i].t) / (series[i + 1].t - series[i].t);
@@ -644,55 +636,90 @@
       }
       return series[series.length - 1].v;
     }
-    
+
+    function getValueAt(series, t, isDiscrete) {
+      if (!series || !series.length) return null;
+
+      if (isDiscrete) {
+        for (let i = series.length - 1; i >= 0; i--) {
+          if (t >= series[i].t) return series[i];
+        }
+        return series[0];
+      }
+
+      // interpolate
+      for (let i = 0; i < series.length - 1; i++) {
+        if (t >= series[i].t && t <= series[i + 1].t) {
+          const f = (t - series[i].t) / (series[i + 1].t - series[i].t);
+          return {
+            v: series[i].v + (series[i + 1].v - series[i].v) * f
+          };
+        }
+      }
+
+      return series[series.length - 1];
+    }
+
+    function formatValue(point, attr) {
+      if (!point) return '';
+
+      if (attr.isDiscrete) {
+        return point.label ?? point.v;
+      }
+
+      return point.v.toFixed(5);
+    }
+
     function formatDuration(ms) {
       if (ms < 1000) return ms + ' ms';
       if (ms < 60000) return (ms / 1000).toFixed(2) + ' s';
       return (ms / 60000).toFixed(2) + ' min';
     }
 
+    function getViewDuration() {
+      return VIEW_END - VIEW_START;
+    }
+
     // ── Data ─────────────────────────────────────────────────────────────────────
     const BASE = new Date("2026-02-03T00:56:30.000Z").getTime();
 
-    const DEVICES = [
-    {
-      id: 'EFEM-01',
-      type: 'EFEM Robot',
-      batch: 'batch-001',
-      lastState: 'ready',
-      segments: [
-        { s: BASE + 4997, e: BASE + 5000, st: 'idle' },
-        { s: BASE + 5000, e: BASE + 5030, st: 'ready' },
-        { s: BASE + 5030, e: BASE + 5040, st: 'busy' },
-        { s: BASE + 5050, e: BASE + 5060, st: 'ready' }
-      ],
-      commands: [
-        { name: 'Init', s: BASE + 5000, e: BASE + 5020, lane: 0, note: '' },
-        { name: 'Home', s: BASE + 5020, e: BASE + 5025, lane: 0, note: '' },
-        { name: 'GetExtend', s: BASE + 5025, e: BASE + 5026, lane: 0, note: '' },
-        { name: 'GetRetract', s: BASE + 5026, e: BASE + 5029, lane: 0, note: '' },
-        { name: 'Cycle', s: BASE + 5029, e: BASE + 5032, lane: 0, note: '' }
-      ],
-      attrs: [
-        {
-          key: 'arm_speed',
-          label: 'Arm Speed',
-          unit: 'mm/s',
-          color: '#3b9eff',
-          series: [
-            { t: BASE + 4999, v: 1 },
-            { t: BASE + 5000, v: 2 },
-            { t: BASE + 5020, v: 0 },
-            { t: BASE + 5024, v: 1.3232 },
-            { t: BASE + 5030, v: 0 }
-          ],
-          min: 0,
-          max: 2,
-          // fmt: v => Math.round(v)
-          fmt: v => v
-        }
-      ]
-    }
+    let DEVICES = [
+      {
+        id: 'EFEM-01',
+        type: 'EFEM Robot',
+        batch: 'batch-001',
+        lastState: 'Ready',
+        segments: [
+          { s: BASE + 4997, e: BASE + 5000, st: 'IDLE' },
+          { s: BASE + 5000, e: BASE + 5030, st: 'Ready' },
+          { s: BASE + 5030, e: BASE + 5040, st: 'Busy' },
+          { s: BASE + 5050, e: BASE + 5060, st: 'Ready' }
+        ],
+        commands: [
+          { name: 'Init', s: BASE + 5000, e: BASE + 5020, lane: 0, note: '' },
+          { name: 'Home', s: BASE + 5020, e: BASE + 5025, lane: 0, note: '' },
+          { name: 'GetExtend', s: BASE + 5025, e: BASE + 5026, lane: 0, note: '' },
+          { name: 'GetRetract', s: BASE + 5026, e: BASE + 5029, lane: 0, note: '' },
+          { name: 'Cycle', s: BASE + 5029, e: BASE + 5032, lane: 0, note: '' }
+        ],
+        attrs: [
+          {
+            key: 'arm_speed',
+            label: 'Arm Speed',
+            unit: 'mm/s',
+            color: '#3b9eff',
+            series: [
+              { t: BASE + 4999, v: 1 },
+              { t: BASE + 5000, v: 2 },
+              { t: BASE + 5020, v: 0 },
+              { t: BASE + 5024, v: 1.3232 },
+              { t: BASE + 5030, v: 0 }
+            ],
+            min: 0,
+            max: 2,
+          }
+        ]
+      }
     ];
     console.log(DEVICES);
     let ALL_TIMES = [];
@@ -705,23 +732,26 @@
 
     let MIN_T = Math.min(...ALL_TIMES);
     let MAX_T = Math.max(...ALL_TIMES);
-    let TOTAL_S = MAX_T - MIN_T; 
+    let TOTAL_S = MAX_T - MIN_T;
+    let VIEW_START = MIN_T;
+    let VIEW_END = MAX_T;
 
     // ── State ─────────────────────────────────────────────────────────────────────
     let selectedDevice = DEVICES[0];
     let activeAttrs = new Set(DEVICES[0].attrs.map(a => a.key));
     let hoverT = null;
     let highlightCmd = null; // command name to highlight on charts
-    
+
     // ── Input file JSON ─────────────────────────────────────────────────────────────────────
-    document.getElementById('fileInput').addEventListener('change', function(e) {
+    document.getElementById('fileInput').addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
 
-      reader.onload = function(evt) {
+      reader.onload = function (evt) {
         const raw = JSON.parse(evt.target.result);
+        console.log(raw)
 
         DEVICES = raw;
 
@@ -740,7 +770,7 @@
     });
 
     function recomputeTime() {
-      const ALL_TIMES = [];
+      ALL_TIMES = [];
 
       DEVICES.forEach(d => {
         d.segments.forEach(s => { ALL_TIMES.push(s.s, s.e); });
@@ -751,6 +781,9 @@
       MIN_T = Math.min(...ALL_TIMES);
       MAX_T = Math.max(...ALL_TIMES);
       TOTAL_S = MAX_T - MIN_T;
+
+      VIEW_START = MIN_T;
+      VIEW_END = MAX_T;
     }
 
     // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -769,18 +802,15 @@
     // ── Timeline ──────────────────────────────────────────────────────────────────
     function buildAxis() {
       const ax = document.getElementById('time-axis'); ax.innerHTML = '';
-      const step = (MAX_T - MIN_T) / 6;
+      const step = (VIEW_END - VIEW_START) / 6;
+
       for (let i = 0; i <= 6; i++) {
-        const t = MIN_T + step * i;
+        const t = VIEW_START + step * i;
         const d = document.createElement('div');
         d.className = 'tick';
         d.textContent = fmtTime(t);
         ax.appendChild(d);
       }
-      //for (let t = 0; t <= TOTAL_S; t += 15) {
-      //  const d = document.createElement('div'); d.className = 'tick';
-      //  d.textContent = t === 0 ? '0' : '+' + t + 's'; ax.appendChild(d);
-      //}
     }
 
     function buildTimeline() {
@@ -853,8 +883,6 @@
 
     // ── Tooltip ───────────────────────────────────────────────────────────────────
     function showCmdTooltip(e, dev, cmd) {
-      // const durMs = cmd.e - cmd.s;
-      // const durSec = (durMs / 1000).toFixed(2);
       const tt = document.getElementById('tooltip');
       const color = CMD_COLOR[cmd.name] || '#888';
       tt.innerHTML = `
@@ -879,6 +907,104 @@
 
     // ── Cursor ────────────────────────────────────────────────────────────────────
     const tlWrap = document.getElementById('tl-wrap');
+
+    tlWrap.addEventListener('dblclick', () => {
+      VIEW_START = MIN_T;
+      VIEW_END = MAX_T;
+      renderAll();
+    });
+
+    tlWrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+
+      const rect = tlWrap.getBoundingClientRect();
+      const LABEL_W = 120 + 14;
+      const RIGHT_PAD = 14;
+      const trackW = rect.width - LABEL_W - RIGHT_PAD;
+
+      const mouseX = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
+      const mouseRatio = mouseX / trackW;
+
+      const range = VIEW_END - VIEW_START;
+      const zoomFactor = 0.1;
+      const zoomAmount = range * zoomFactor;
+
+      let newStart = VIEW_START;
+      let newEnd = VIEW_END;
+
+      if (e.deltaY < 0) {
+        // zoom in
+        newStart += zoomAmount * mouseRatio;
+        newEnd -= zoomAmount * (1 - mouseRatio);
+      } else {
+        // zoom out
+        newStart -= zoomAmount * mouseRatio;
+        newEnd += zoomAmount * (1 - mouseRatio);
+      }
+
+      // clamp
+      const totalRange = MAX_T - MIN_T;
+
+      if (newEnd - newStart > (MAX_T - MIN_T)) return;
+      if (newStart < MIN_T) {
+        newEnd += (MIN_T - newStart);
+        newStart = MIN_T;
+      }
+
+      if (newEnd > MAX_T) {
+        newStart -= (newEnd - MAX_T);
+        newEnd = MAX_T;
+      }
+
+      VIEW_START = newStart;
+      VIEW_END = newEnd;
+
+      renderAll();
+    });
+
+    let isDragging = false;
+    let lastX = 0;
+
+    tlWrap.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    tlWrap.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+
+      const rect = tlWrap.getBoundingClientRect();
+      const LABEL_W = 120 + 14;
+      const RIGHT_PAD = 14;
+      const trackW = rect.width - LABEL_W - RIGHT_PAD;
+
+      const range = VIEW_END - VIEW_START;
+      const dt = (dx / trackW) * range;
+
+      VIEW_START -= dt;
+      VIEW_END -= dt;
+
+      // clamp
+      if (VIEW_START < MIN_T) {
+        VIEW_END += (MIN_T - VIEW_START);
+        VIEW_START = MIN_T;
+      }
+
+      if (VIEW_END > MAX_T) {
+        VIEW_START -= (VIEW_END - MAX_T);
+        VIEW_END = MAX_T;
+      }
+
+      renderAll();
+    });
+
     const tlCursor = document.getElementById('tl-cursor');
     const cursorLbl = document.getElementById('cursor-lbl');
     const LABEL_W = 120 + 14, RIGHT_PAD = 14;
@@ -887,12 +1013,10 @@
       const rect = tlWrap.getBoundingClientRect();
       const trackW = rect.width - LABEL_W - RIGHT_PAD;
       const x = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
-      //hoverT = (x / trackW) * TOTAL_S;
-      hoverT = MIN_T + (x / trackW) * TOTAL_S;
+      hoverT = VIEW_START + (x / trackW) * (VIEW_END - VIEW_START);
       tlCursor.style.display = 'block';
       tlCursor.style.left = (LABEL_W + x) + 'px';
       tlCursor.style.top = '32px'; tlCursor.style.bottom = '0';
-      //cursorLbl.textContent = hoverT.toFixed(1) + 's';
       cursorLbl.textContent = fmtTime(hoverT);
       updateInfoBar(hoverT);
       updateChartCursors(hoverT);
@@ -939,7 +1063,8 @@
       const cs = document.getElementById('charts-section'); cs.innerHTML = '';
       dev.attrs.filter(a => activeAttrs.has(a.key)).forEach(attr => {
         const row = document.createElement('div'); row.className = 'chart-row';
-        const curVal = lerp(attr.series, hoverT !== null ? hoverT : MIN_T);
+        const p = getValueAt(attr.series, hoverT ?? MIN_T, attr.isDiscrete);
+        const curVal = formatValue(p, attr);
         const yl = document.createElement('div'); yl.className = 'chart-ylabel';
         yl.innerHTML = `<div class="yn">${attr.label}</div><div class="yv" style="color:${attr.color}" id="yv-${attr.key}">${curVal}</div><div class="yu">${attr.unit}</div>`;
         row.appendChild(yl);
@@ -956,6 +1081,8 @@
     }
 
     function drawChart(canvas, attr, dev) {
+      console.log(attr)
+      const isStep = !!attr.isDiscrete;
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.parentElement.getBoundingClientRect();
       const W = rect.width, H = rect.height || 55;
@@ -966,8 +1093,7 @@
       // state bands background
       dev.segments.forEach(seg => {
         ctx.fillStyle = STATE_COLOR[seg.st] + '18';
-        //ctx.fillRect((seg.s / TOTAL_S) * W, 0, ((seg.e - seg.s) / TOTAL_S) * W, H);
-        ctx.fillRect(((seg.s - MIN_T) / TOTAL_S) * W, 0, ((seg.e - seg.s) / TOTAL_S) * W, H);
+        ctx.fillRect(((seg.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((seg.e - seg.s) / (VIEW_END - VIEW_START)) * W, H);
       });
 
       // highlight command band
@@ -975,14 +1101,12 @@
         dev.commands.filter(c => c.name === highlightCmd).forEach(cmd => {
           const color = CMD_COLOR[cmd.name] || '#888';
           ctx.fillStyle = color + '28';
-          //ctx.fillRect((cmd.s / TOTAL_S) * W, 0, ((cmd.e - cmd.s) / TOTAL_S) * W, H);
-          ctx.fillRect(((cmd.s - MIN_T) / TOTAL_S) * W, 0, ((cmd.e - cmd.s) / TOTAL_S) * W, H);
+          ctx.fillRect(((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((cmd.e - cmd.s) / (VIEW_END - VIEW_START)) * W, H);
           ctx.strokeStyle = color + '80';
           ctx.lineWidth = 1;
           ctx.setLineDash([3, 3]);
           [[cmd.s], [cmd.e]].forEach(([t]) => {
-              //const x = (t / TOTAL_S) * W;
-            const x = ((t - MIN_T) / TOTAL_S) * W;
+            const x = ((t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
           });
           ctx.setLineDash([]);
@@ -998,48 +1122,110 @@
       ctx.fillText(attr.max, 2, 9);
       ctx.fillText(attr.min, 2, H - 2);
 
+      const range = attr.max - attr.min || 1;
+
       // area fill
       ctx.beginPath();
-      attr.series.forEach((p, i) => {
-        //const x = hoverT = MIN_T + (x / trackW) * TOTAL_S; * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
-        const x = ((p.t - MIN_T) / TOTAL_S) * W;
-        const y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
-        if (i === 0) { ctx.moveTo(x, H); ctx.lineTo(x, y); } else ctx.lineTo(x, y);
-      });
-      // const lx = (attr.series[attr.series.length - 1].t / TOTAL_S) * W;
-      const lx = ((attr.series[attr.series.length - 1].t - MIN_T) / TOTAL_S) * W;
-      ctx.lineTo(lx, H); ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, attr.color + '38'); grad.addColorStop(1, attr.color + '00');
-      ctx.fillStyle = grad; ctx.fill();
+      ctx.strokeStyle = attr.color;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = attr.color;
+      ctx.shadowBlur = 3;
 
-      // line
-      ctx.beginPath(); ctx.strokeStyle = attr.color; ctx.lineWidth = 1.5;
-      ctx.shadowColor = attr.color; ctx.shadowBlur = 3;
-      attr.series.forEach((p, i) => {
-        //const x = hoverT = MIN_T + (x / trackW) * TOTAL_S; * W, y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
-        const x = ((p.t - MIN_T) / TOTAL_S) * W;
-        const y = H - ((p.v - attr.min) / (attr.max - attr.min)) * H;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.stroke(); ctx.shadowBlur = 0;
+      if (isStep) {
+        for (let i = 0; i < attr.series.length - 1; i++) {
+          const p0 = attr.series[i];
+          const p1 = attr.series[i + 1];
+
+          const x0 = ((p0.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y0 = H - ((p0.v - attr.min) / (attr.max - attr.min)) * H;
+
+          const x1 = ((p1.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y1 = H - ((p1.v - attr.min) / (attr.max - attr.min)) * H;
+
+          if (i === 0) ctx.moveTo(x0, y0);
+
+          ctx.lineTo(x1, y0);
+          ctx.lineTo(x1, y1);
+        }
+      } else {
+        attr.series.forEach((p, i) => {
+          const x = ((p.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y = H - ((p.v - attr.min) / range) * H;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+      }
+
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const lx = ((attr.series[attr.series.length - 1].t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+
+
+      ctx.beginPath();
+
+      if (isStep) {
+        for (let i = 0; i < attr.series.length - 1; i++) {
+          const p0 = attr.series[i];
+          const p1 = attr.series[i + 1];
+
+          const x0 = ((p0.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y0 = H - ((p0.v - attr.min) / (attr.max - attr.min)) * H;
+
+          const x1 = ((p1.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+
+          if (i === 0) {
+            ctx.moveTo(x0, H);
+            ctx.lineTo(x0, y0);
+          }
+
+          ctx.lineTo(x1, y0);
+        }
+
+        const last = attr.series[attr.series.length - 1];
+        const lx = ((last.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+
+        ctx.lineTo(lx, H);
+      } else {
+        attr.series.forEach((p, i) => {
+          const x = ((p.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y = H - ((p.v - attr.min) / range) * H;
+
+          if (i === 0) {
+            ctx.moveTo(x, H);
+            ctx.lineTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+
+        const last = attr.series[attr.series.length - 1];
+        const lx = ((last.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+
+        ctx.lineTo(lx, H);
+      }
+
+      ctx.closePath();
+
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, attr.color + '38');
+      grad.addColorStop(1, attr.color + '00');
+
+      ctx.fillStyle = grad;
+      ctx.fill();
 
       // cmd markers
       dev.commands.forEach(cmd => {
         const color = CMD_COLOR[cmd.name] || '#888';
         ctx.strokeStyle = color + '60'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
         [[cmd.s, color], [cmd.e, 'rgba(160,176,200,.3)']].forEach(([t, c]) => {
-          if (t > MAX_T) return;
+          if (t > VIEW_END) return;
           ctx.strokeStyle = c;
-          //const x = (t / TOTAL_S) * W;
-          const x = ((t - MIN_T) / TOTAL_S) * W;
+          const x = ((t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
           ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
         });
         ctx.setLineDash([]);
         // label
         if (cmd.lane === 0 && cmd.e - cmd.s >= 5) {
-          //const cx = (cmd.s / TOTAL_S) * W + 4;
-          const cx = ((cmd.s - MIN_T) / TOTAL_S) * W + 4;
+          const cx = ((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W + 4;
           ctx.fillStyle = color + 'cc'; ctx.font = '8px JetBrains Mono';
           ctx.fillText(cmd.name, cx, 9);
         }
@@ -1061,13 +1247,22 @@
         if (!cc || !cv) return;
         const rect = cv.parentElement.getBoundingClientRect();
         const W = rect.width, H = rect.height || 55;
-        //const x = (t / TOTAL_S) * W;
-        const x = ((t - MIN_T) / TOTAL_S) * W;
-        const val = lerp(attr.series, t);
-        const y = H - ((val - attr.min) / (attr.max - attr.min)) * H;
-        cc.style.display = 'block'; cc.style.left = x + 'px';
-        cd.style.display = 'block'; cd.style.left = x + 'px'; cd.style.top = y + 'px';
-        if (yv) yv.textContent = val;
+        const x = ((t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+
+        const p = getValueAt(attr.series, t, attr.isDiscrete);
+        if (!p) return;
+
+        const range = attr.max - attr.min || 1;
+        const y = H - ((p.v - attr.min) / range) * H;
+
+        cd.style.display = 'block';
+        cd.style.left = x + 'px';
+        cd.style.top = y + 'px';
+        cc.style.display = 'block';
+        cd.title = p.label ?? p.v;
+        cc.style.display = 'block';
+        cc.style.left = x + 'px';
+        if (yv) yv.textContent = formatValue(p, attr);
       });
     }
 
@@ -1075,11 +1270,18 @@
       selectedDevice.attrs.forEach(attr => {
         const cc = document.getElementById('cc-' + attr.key);
         const cd = document.getElementById('cd-' + attr.key);
-        if (cc) cc.style.display = 'none';  
+        if (cc) cc.style.display = 'none';
         if (cd) cd.style.display = 'none';
         const yv = document.getElementById('yv-' + attr.key);
-        if (yv) yv.textContent = lerp(attr.series, 0);
+        const p = getValueAt(attr.series, MIN_T, attr.isDiscrete);
+        if (yv) yv.textContent = formatValue(p, attr);
       });
+    }
+
+    function renderAll() {
+      buildAxis();
+      buildTimeline();
+      buildAttrPanel();
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────────

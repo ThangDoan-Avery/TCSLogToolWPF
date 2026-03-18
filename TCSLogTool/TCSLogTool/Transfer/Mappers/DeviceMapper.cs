@@ -52,16 +52,18 @@ public static class DeviceMapper
                 var series = a.Points.Select(p => new AttrPointDto
                 {
                     t = TimeHelper.ToUnixMs(p.Time),
-                    v = p.Value
+                    v = p.Value,
+                    label = a.IsDiscrete ? p.Label : null
                 }).ToList();
 
                 return new AttrDto
                 {
-                    key = $"{a.Device}_{a.Attribute}", // 🔥 theo yêu cầu bạn
+                    key = $"{a.Device}_{a.Attribute}",
                     label = a.Attribute,
                     unit = a.Unit ?? "",
                     color = ColorHelper.RandomColor(),
                     series = series,
+                    isDiscrete = a.IsDiscrete,
                     min = series.Count > 0 ? series.Min(x => x.v) : 0,
                     max = series.Count > 0 ? series.Max(x => x.v) : 0,
                 };

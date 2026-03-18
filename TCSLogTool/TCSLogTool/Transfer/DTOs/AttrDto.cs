@@ -4,6 +4,7 @@
     public string label { get; set; } = "";
     public string unit { get; set; } = "";
     public string color { get; set; } = "";
+    public bool isDiscrete { get; set; }
 
     public List<AttrPointDto> series { get; set; } = new();
 
