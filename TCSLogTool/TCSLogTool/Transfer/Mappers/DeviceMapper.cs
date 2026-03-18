@@ -64,7 +64,6 @@ public static class DeviceMapper
                     series = series,
                     min = series.Count > 0 ? series.Min(x => x.v) : 0,
                     max = series.Count > 0 ? series.Max(x => x.v) : 0,
-                    fmt = "v => v"
                 };
             }).ToList();
 

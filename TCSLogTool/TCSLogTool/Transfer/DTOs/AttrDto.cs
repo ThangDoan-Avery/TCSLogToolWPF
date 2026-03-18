@@ -9,6 +9,4 @@
 
     public double min { get; set; }
     public double max { get; set; }
-
-    public string fmt { get; set; } = "v => v";
 }

@@ -695,7 +695,7 @@
     }
     ];
     console.log(DEVICES);
-    const ALL_TIMES = [];
+    let ALL_TIMES = [];
 
     DEVICES.forEach(d => {
       d.segments.forEach(s => { ALL_TIMES.push(s.s, s.e); });
@@ -703,9 +703,9 @@
       d.attrs.forEach(a => a.series.forEach(p => ALL_TIMES.push(p.t)));
     });
 
-    const MIN_T = Math.min(...ALL_TIMES);
-    const MAX_T = Math.max(...ALL_TIMES);
-    const TOTAL_S = MAX_T - MIN_T; 
+    let MIN_T = Math.min(...ALL_TIMES);
+    let MAX_T = Math.max(...ALL_TIMES);
+    let TOTAL_S = MAX_T - MIN_T; 
 
     // ── State ─────────────────────────────────────────────────────────────────────
     let selectedDevice = DEVICES[0];
@@ -714,8 +714,44 @@
     let highlightCmd = null; // command name to highlight on charts
     
     // ── Input file JSON ─────────────────────────────────────────────────────────────────────
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
 
+      const reader = new FileReader();
 
+      reader.onload = function(evt) {
+        const raw = JSON.parse(evt.target.result);
+
+        DEVICES = raw;
+
+        // recompute time range
+        recomputeTime();
+
+        // rebuild UI
+        buildAxis();
+        buildTimeline();
+        buildLegend();
+        buildTabs();
+        buildAttrPanel();
+      };
+
+      reader.readAsText(file);
+    });
+
+    function recomputeTime() {
+      const ALL_TIMES = [];
+
+      DEVICES.forEach(d => {
+        d.segments.forEach(s => { ALL_TIMES.push(s.s, s.e); });
+        d.commands.forEach(c => { ALL_TIMES.push(c.s, c.e); });
+        d.attrs.forEach(a => a.series.forEach(p => ALL_TIMES.push(p.t)));
+      });
+
+      MIN_T = Math.min(...ALL_TIMES);
+      MAX_T = Math.max(...ALL_TIMES);
+      TOTAL_S = MAX_T - MIN_T;
+    }
 
     // ── Tabs ──────────────────────────────────────────────────────────────────────
     function buildTabs() {
@@ -905,7 +941,7 @@
         const row = document.createElement('div'); row.className = 'chart-row';
         const curVal = lerp(attr.series, hoverT !== null ? hoverT : MIN_T);
         const yl = document.createElement('div'); yl.className = 'chart-ylabel';
-        yl.innerHTML = `<div class="yn">${attr.label}</div><div class="yv" style="color:${attr.color}" id="yv-${attr.key}">${attr.fmt(curVal)}</div><div class="yu">${attr.unit}</div>`;
+        yl.innerHTML = `<div class="yn">${attr.label}</div><div class="yv" style="color:${attr.color}" id="yv-${attr.key}">${curVal}</div><div class="yu">${attr.unit}</div>`;
         row.appendChild(yl);
 
         const ca = document.createElement('div'); ca.className = 'chart-area';
@@ -959,8 +995,8 @@
 
       // labels
       ctx.fillStyle = '#354060'; ctx.font = '8px JetBrains Mono';
-      ctx.fillText(attr.fmt(attr.max), 2, 9);
-      ctx.fillText(attr.fmt(attr.min), 2, H - 2);
+      ctx.fillText(attr.max, 2, 9);
+      ctx.fillText(attr.min, 2, H - 2);
 
       // area fill
       ctx.beginPath();
@@ -1031,7 +1067,7 @@
         const y = H - ((val - attr.min) / (attr.max - attr.min)) * H;
         cc.style.display = 'block'; cc.style.left = x + 'px';
         cd.style.display = 'block'; cd.style.left = x + 'px'; cd.style.top = y + 'px';
-        if (yv) yv.textContent = attr.fmt(val);
+        if (yv) yv.textContent = val;
       });
     }
 
@@ -1042,7 +1078,7 @@
         if (cc) cc.style.display = 'none';  
         if (cd) cd.style.display = 'none';
         const yv = document.getElementById('yv-' + attr.key);
-        if (yv) yv.textContent = attr.fmt(lerp(attr.series, 0));
+        if (yv) yv.textContent = lerp(attr.series, 0);
       });
     }
 
