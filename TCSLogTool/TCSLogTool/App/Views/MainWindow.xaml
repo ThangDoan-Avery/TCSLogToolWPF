@@ -26,6 +26,9 @@
 
             <TextBlock Text="End Time:" Margin="10,0,0,0"/>
             <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
+
+            <Button Content="Export JSON"
+                    Command="{Binding ExportJsonCommand}" />
         </StackPanel>
 
         <Grid>

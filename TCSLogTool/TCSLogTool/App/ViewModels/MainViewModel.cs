@@ -2,6 +2,9 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel.Design;
+using Microsoft.Win32;
+using System.IO;
 using System.Diagnostics;
 using System.Windows.Input;
 using TCSLogTool.Core.Services;
@@ -28,11 +31,15 @@ public partial class MainViewModel : ObservableObject
 
     public ICommand OpenFileCommand { get; }
 
+    public ICommand ExportJsonCommand { get; }
+
     public MainViewModel(LogAnalyzerService analyzer)
     {
         this.analyzer = analyzer;
 
         OpenFileCommand = new RelayCommand(OpenFiles);
+
+        ExportJsonCommand = new RelayCommand(ExportJson);
     }
 
     private void OpenFiles()
@@ -84,5 +91,27 @@ public partial class MainViewModel : ObservableObject
             foreach (var point in series.Points)
                 AttributePoints.Add(point);
         }
+    }
+
+
+    public void ExportJson()
+    {
+        var devices = DeviceMapper.Map(
+            States.ToList(),
+            Commands.ToList(),
+            AttributeSeries.ToList());
+
+        var json = JsonExportService.Export(devices);
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "JSON file (*.json)|*.json",
+            FileName = "output.json"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        File.WriteAllText(dialog.FileName, json);
     }
 }
