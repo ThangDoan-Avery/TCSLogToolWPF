@@ -647,16 +647,6 @@
   </header>
 
   <div class="tag-bar" id="tag-bar">
-    <button class="tag-btn active" data-tag="ALL">All</button>
-
-    <!-- default tags -->
-    <button class="tag-btn" data-tag="Robot">Robot</button>
-    <button class="tag-btn" data-tag="Lift">Lift</button>
-
-    <!-- dynamic tags -->
-    <div id="custom-tags"></div>
-
-    <button id="add-tag-btn" class="tag-add">+ Create New Tag</button>
   </div>
 
   <!-- Device tabs -->
@@ -10632,6 +10622,7 @@
     let highlightCmd = null;
 
     let activeTag = 'ALL';
+    let CUSTOM_TAGS = {};
     let VIEW_START, VIEW_END, MIN_T, MAX_T;
     let ALL_TIMES = [];
 
@@ -10689,6 +10680,16 @@
     function getFilteredDevices() {
       if (activeTag === 'ALL') return DEVICES;
       return DEVICES.filter(d => d.type === activeTag);
+    }
+
+    function getFilteredDevices() {
+      if (activeTag === 'ALL') return DEVICES;
+
+      const byType = DEVICES.filter(d => d.type === activeTag);
+      if (byType.length) return byType;
+
+      const ids = CUSTOM_TAGS[activeTag] || [];
+      return DEVICES.filter(d => ids.includes(d.id));
     }
 
     // ==========================================
@@ -10770,40 +10771,121 @@
     }
 
     // BUILD TAGBAR
+    // function buildTagBar() {
+    //   const tagBar = document.getElementById('tag-bar');
+    //   if (!tagBar) return;
+
+    //   // Clear toàn bộ
+    //   tagBar.innerHTML = '';
+
+    //   // 1. Button ALL (default)
+    //   const allBtn = document.createElement('button');
+    //   allBtn.className = 'tag-btn active';
+    //   allBtn.dataset.tag = 'ALL';
+    //   allBtn.textContent = 'All';
+
+    //   allBtn.onclick = () => {
+    //     setActiveTag('ALL');
+    //   };
+
+    //   tagBar.appendChild(allBtn);
+
+    //   // 2. Lấy unique type từ DEVICES
+    //   const types = [...new Set(DEVICES.map(d => d.type))];
+    //   console.log(types);
+
+    //   types.forEach(type => {
+    //     const btn = document.createElement('button');
+    //     btn.className = 'tag-btn';
+    //     btn.dataset.tag = type;
+    //     btn.textContent = type;
+
+    //     btn.onclick = () => {
+    //       setActiveTag(type);
+    //     };
+
+    //     tagBar.appendChild(btn);
+    //   });
+    // }
+
+    // function openCreateTagDialog() {
+    //   const name = prompt('Tag name:');
+    //   if (!name) return;
+
+    //   const ids = DEVICES
+    //     .filter(d => confirm(`Add ${d.id}?`))
+    //     .map(d => d.id);
+
+    //   CUSTOM_TAGS[name] = ids;
+
+    //   buildTagBar();
+    // }
+
+
+    function openCreateTagDialog() {
+      const tagName = prompt('Enter tag name:');
+      if (!tagName) return;
+
+      if (CUSTOM_TAGS[tagName]) {
+        alert('Tag already exists!');
+        return;
+      }
+
+      const deviceList = DEVICES.map(d => d.id).join(', ');
+      const selected = prompt(`Select devices (comma separated):\n${deviceList}`);
+      if (!selected) return;
+
+      const ids = selected.split(',').map(s => s.trim());
+
+      CUSTOM_TAGS[tagName] = ids;
+      activeTag = tagName;
+
+      // localStorage
+      localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
+
+      buildTagBar();
+      renderAll();
+      buildTabs();
+    }
+
     function buildTagBar() {
       const tagBar = document.getElementById('tag-bar');
       if (!tagBar) return;
 
-      // Clear toàn bộ
       tagBar.innerHTML = '';
 
-      // 1. Button ALL (default)
+      // ALL
       const allBtn = document.createElement('button');
-      allBtn.className = 'tag-btn active';
-      allBtn.dataset.tag = 'ALL';
+      allBtn.className = 'tag-btn' + (activeTag === 'ALL' ? ' active' : '');
       allBtn.textContent = 'All';
-
-      allBtn.onclick = () => {
-        setActiveTag('ALL');
-      };
-
+      allBtn.onclick = () => setActiveTag('ALL');
       tagBar.appendChild(allBtn);
 
-      // 2. Lấy unique type từ DEVICES
+      // TYPE TAG
       const types = [...new Set(DEVICES.map(d => d.type))];
-
       types.forEach(type => {
         const btn = document.createElement('button');
-        btn.className = 'tag-btn';
-        btn.dataset.tag = type;
+        btn.className = 'tag-btn' + (activeTag === type ? ' active' : '');
         btn.textContent = type;
-
-        btn.onclick = () => {
-          setActiveTag(type);
-        };
-
+        btn.onclick = () => setActiveTag(type);
         tagBar.appendChild(btn);
       });
+
+      // CUSTOM TAG
+      Object.keys(CUSTOM_TAGS).forEach(tag => {
+        const btn = document.createElement('button');
+        btn.className = 'tag-btn' + (activeTag === tag ? ' active' : '');
+        btn.textContent = tag;
+        btn.onclick = () => setActiveTag(tag);
+        tagBar.appendChild(btn);
+      });
+
+      // ADD BUTTON
+      const addBtn = document.createElement('button');
+      addBtn.className = 'tag-add';
+      addBtn.textContent = '+ Create New Tag';
+      addBtn.onclick = openCreateTagDialog;
+      tagBar.appendChild(addBtn);
     }
 
     // Set active cho tag
@@ -10811,8 +10893,16 @@
       activeTag = tag;
 
       const filtered = getFilteredDevices();
-      selectedDevice = filtered[0] || null;
 
+      if (!filtered.length) {
+        activeTag = 'ALL';
+      }
+
+      if (!filtered.includes(selectedDevice)) {
+        selectedDevice = filtered[0] || null;
+      }
+
+      // update UI active
       document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tag === tag);
       });
@@ -11071,7 +11161,11 @@
 
     function buildAttrPanel() {
       const dev = selectedDevice;
-      if (!dev) return;
+      if (!dev) {
+        document.getElementById('attr-panel-title').textContent = 'No device';
+        document.getElementById('charts-section').innerHTML = '';
+        return;
+      }
       document.getElementById('attr-panel-title').textContent = `Attributes — ${dev.id}`;
 
       // 1. Toggles
@@ -11156,11 +11250,12 @@
     // 5. INITIALIZATION & INTERACTION
     // ==========================================
     window.onload = function () {
+      CUSTOM_TAGS = JSON.parse(localStorage.getItem('customTags') || '{}');
+      recomputeTime();
       if (DEVICES.length > 0) {
         selectedDevice = DEVICES[0];
         activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
         buildTagBar();
-        recomputeTime();
         renderAll();
         buildLegend();
         buildTabs();
@@ -11221,9 +11316,14 @@
         reader.onload = function (evt) {
           DEVICES = JSON.parse(evt.target.result);
           if (DEVICES.length > 0) {
+            activeTag = "ALL";
             selectedDevice = DEVICES[0];
             activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
-            recomputeTime(); renderAll(); buildLegend(); buildTabs();
+            buildTagBar();
+            recomputeTime();
+            renderAll();
+            buildLegend();
+            buildTabs();
           }
         };
         reader.readAsText(file);
