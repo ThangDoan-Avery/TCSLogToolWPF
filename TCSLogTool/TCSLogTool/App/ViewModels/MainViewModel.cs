@@ -33,6 +33,8 @@ public partial class MainViewModel : ObservableObject
 
     public ICommand ExportJsonCommand { get; }
 
+    public ICommand OpenViewerCommand { get; }
+
     public MainViewModel(LogAnalyzerService analyzer)
     {
         this.analyzer = analyzer;
@@ -40,6 +42,8 @@ public partial class MainViewModel : ObservableObject
         OpenFileCommand = new RelayCommand(OpenFiles);
 
         ExportJsonCommand = new RelayCommand(ExportJson);
+
+        OpenViewerCommand = new RelayCommand(OpenViewer);
     }
 
     private void OpenFiles()
@@ -113,5 +117,45 @@ public partial class MainViewModel : ObservableObject
             return;
 
         File.WriteAllText(dialog.FileName, json);
+    }
+
+    public void OpenViewer()
+    {
+        var devices = DeviceMapper.Map(
+            States.ToList(),
+            Commands.ToList(),
+            AttributeSeries.ToList());
+
+        OpenHtmlWithData(devices);
+    }
+
+    private void OpenHtmlWithData(object devices)
+    {
+        var json = JsonExportService.Export(devices);
+
+        var htmlPath = @"C:\Users\Thang10136\TCSLogToolWPF\TCSLogTool\TCSLogTool.html";
+
+        var tempHtml = Path.Combine(Path.GetTempPath(), "tcs_viewer.html");
+
+        var html = File.ReadAllText(htmlPath);
+
+        var inject = $@"
+        <script>
+        window.addEventListener('load', function() {{
+            const data = {json};
+            window.setDevicesFromWpf(data);
+        }});
+        </script>
+        </body>";
+
+        html = html.Replace("</body>", inject);
+
+        File.WriteAllText(tempHtml, html);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = tempHtml,
+            UseShellExecute = true
+        });
     }
 }

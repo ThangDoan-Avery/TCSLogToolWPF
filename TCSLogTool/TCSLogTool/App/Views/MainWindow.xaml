@@ -3,66 +3,60 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TCS Log Tool"
         Height="600"
-        Width="900">
-
+        Width="1100">
     <DockPanel>
+        <DockPanel DockPanel.Dock="Top" LastChildFill="False" Background="#F0F0F0">
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-            <Button Content="Open Log"
-                    Command="{Binding OpenFileCommand}"
-                    Margin="5"/>
+            <DockPanel.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="VerticalAlignment" Value="Center"/>
+                    <Setter Property="Margin" Value="10,0,0,0"/>
+                </Style>
+                <Style TargetType="Button">
+                    <Setter Property="Margin" Value="5"/>
+                    <Setter Property="Padding" Value="10,2"/>
+                </Style>
+            </DockPanel.Resources>
 
-            <TextBlock Text="Files:" Margin="10,0,0,0"/>
-            <TextBlock Text="{Binding Statistics.FileCount}" Margin="5,0"/>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                <Button Content="Open Log" Command="{Binding OpenFileCommand}"/>
 
-            <TextBlock Text="Commands:" Margin="10,0,0,0"/>
-            <TextBlock Text="{Binding Statistics.CommandCount}" Margin="5,0"/>
+                <TextBlock Text="Files:"/>
+                <TextBlock Text="{Binding Statistics.FileCount}" Margin="5,0"/>
 
-            <TextBlock Text="Devices:" Margin="10,0,0,0"/>
-            <TextBlock Text="{Binding Statistics.DeviceCount}" Margin="5,0"/>
+                <TextBlock Text="Commands:"/>
+                <TextBlock Text="{Binding Statistics.CommandCount}" Margin="5,0"/>
 
-            <TextBlock Text="Start Time:" Margin="10,0,0,0"/>
-            <TextBlock Text="{Binding Statistics.StartTime}" Margin="5,0"/>
+                <TextBlock Text="Devices:"/>
+                <TextBlock Text="{Binding Statistics.DeviceCount}" Margin="5,0"/>
 
-            <TextBlock Text="End Time:" Margin="10,0,0,0"/>
-            <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
+                <TextBlock Text="Start Time:"/>
+                <TextBlock Text="{Binding Statistics.StartTime}" Margin="5,0"/>
 
-            <Button Content="Export JSON"
-                    Command="{Binding ExportJsonCommand}" />
-        </StackPanel>
+                <TextBlock Text="End Time:"/>
+                <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button Content="Export JSON" Command="{Binding ExportJsonCommand}"/>
+                <Button Content="Open Viewer" Command="{Binding OpenViewerCommand}" Margin="5,5,20,5"/>
+            </StackPanel>
+        </DockPanel>
 
         <Grid>
-
             <Grid.RowDefinitions>
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="2*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <DataGrid  Grid.Row="4"
-                    ItemsSource="{Binding Logs}"
-                    AutoGenerateColumns="True"/>
-
-
-            <DataGrid Grid.Row="0"
-                    ItemsSource="{Binding Commands}"
-                    AutoGenerateColumns="True"/>
-
-            <DataGrid Grid.Row="1"
-                    ItemsSource="{Binding States}"
-                    AutoGenerateColumns="True"/>
-
-            <DataGrid Grid.Row="2"
-                    ItemsSource="{Binding AttributeSeries}"
-                    AutoGenerateColumns="True"/>
-
-            <DataGrid Grid.Row="3"
-                    ItemsSource="{Binding AttributePoints}"
-                    AutoGenerateColumns="True"/>
-
+            <DataGrid Grid.Row="0" ItemsSource="{Binding Commands}" AutoGenerateColumns="True"/>
+            <DataGrid Grid.Row="1" ItemsSource="{Binding States}" AutoGenerateColumns="True"/>
+            <DataGrid Grid.Row="2" ItemsSource="{Binding AttributeSeries}" AutoGenerateColumns="True"/>
+            <DataGrid Grid.Row="3" ItemsSource="{Binding AttributePoints}" AutoGenerateColumns="True"/>
+            <DataGrid Grid.Row="4" ItemsSource="{Binding Logs}" AutoGenerateColumns="True"/>
         </Grid>
     </DockPanel>
-
 </Window>

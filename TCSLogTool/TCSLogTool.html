@@ -211,7 +211,14 @@
 
     .device-group.active {
       outline: 1px solid var(--accent);
-      background: rgba(108, 71, 255, .05);
+      background: rgba(108, 71, 255, .08);
+      box-shadow: inset 0 0 0 1px rgba(108, 71, 255, 0.2);
+      border-radius: 4px;
+      margin: 3px;
+    }
+
+    .device-group.active .dev-label {
+      color: #c0aaff;
     }
 
     .batch-lbl {
@@ -697,13 +704,20 @@
       justify-content: flex-end;
     }
 
-    #tag-create-btn {
+    #tag-create-btn,
+    #deselect-all-dev,
+    #select-all-dev,
+    #tag-close {
       background: var(--accent);
       border: none;
       padding: 5px 10px;
       border-radius: 4px;
       color: white;
       cursor: pointer;
+    }
+
+    #tag-close {
+      background: var(--muted2);
     }
   </style>
 </head>
@@ -851,15 +865,32 @@
     // 3. LOGIC HANDLERS
     // ==========================================
     function recomputeTime() {
-      ALL_TIMES = [];
+      MIN_T = Infinity;
+      MAX_T = -Infinity;
+
       DEVICES.forEach(d => {
-        d.segments.forEach(s => ALL_TIMES.push(s.s, s.e));
-        d.commands.forEach(c => ALL_TIMES.push(c.s, c.e));
-        d.attrs.forEach(a => a.series.forEach(p => ALL_TIMES.push(p.t)));
+        d.segments.forEach(s => {
+          if (s.s < MIN_T) MIN_T = s.s;
+          if (s.e > MAX_T) MAX_T = s.e;
+        });
+
+        d.commands.forEach(c => {
+          if (c.s < MIN_T) MIN_T = c.s;
+          if (c.e > MAX_T) MAX_T = c.e;
+        });
+
+        d.attrs.forEach(a => {
+          a.series.forEach(p => {
+            if (p.t < MIN_T) MIN_T = p.t;
+            if (p.t > MAX_T) MAX_T = p.t;
+          });
+        });
       });
-      if (ALL_TIMES.length === 0) return;
-      MIN_T = Math.min(...ALL_TIMES); MAX_T = Math.max(...ALL_TIMES);
-      VIEW_START = MIN_T; VIEW_END = MAX_T;
+
+      if (MIN_T === Infinity) return;
+
+      VIEW_START = MIN_T;
+      VIEW_END = MAX_T;
     }
 
     // Tooltip 
@@ -872,7 +903,9 @@
             <div class="tt-row"><span class="tt-label">Device:</span><span class="tt-val">${dev.id}</span></div>
             <div class="tt-row"><span class="tt-label">Start:</span><span class="tt-val">${fmtTime(cmd.s)}</span></div>
             <div class="tt-row"><span class="tt-label">End:</span><span class="tt-val">${fmtTime(cmd.e)}</span></div>
-            <div class="tt-row"><span class="tt-label">Duration:</span><span class="tt-val" style="color:#fff; font-weight:bold">${formatDuration(cmd.e - cmd.s)}</span></div>
+            <div class="tt-row"><span class="tt-label">Duration:</span>
+              <span class="tt-val" style="color:#fff; font-weight:bold">${formatDuration(cmd.e - cmd.s)}</span>
+            </div>
             <div class="tt-note">${cmd.note || ''}</div>
         `;
       tt.classList.add('show');
@@ -912,6 +945,22 @@
     }
 
     function hideChartCursors() { document.querySelectorAll('.ccursor, .cdot').forEach(el => el.style.display = 'none'); }
+
+    function loadData(data) {
+      DEVICES = data || [];
+
+      if (DEVICES.length > 0) {
+        activeTag = "ALL";
+        selectedDevice = DEVICES[0];
+        activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
+
+        recomputeTime();
+        buildTagBar();
+        renderAll();
+        buildLegend();
+        buildTabs();
+      }
+    }
 
     // ==========================================
     // 4. UI RENDERERS
@@ -975,475 +1024,476 @@
       renderDeviceList('');
 
       // override create button → update
-        document.getElementById('tag-create-btn').onclick = () => {
-          const newName = document.getElementById('tag-name-input').value.trim();
+      document.getElementById('tag-create-btn').onclick = () => {
+        const newName = document.getElementById('tag-name-input').value.trim();
 
-          const selected = [...TAG_SELECTED_DEVICES];
-
-          delete CUSTOM_TAGS[tag];
-          CUSTOM_TAGS[newName] = selected;
-
-          localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
-
-          activeTag = newName;
-
-          closeTagModal();
-          buildTagBar();
-          renderAll();
-          buildTabs();
-
-          // restore default handler
-          initTagModalEvents();
-        };
-      }
-
-      function deleteTag(tag) {
-        if (!confirm(`Delete tag "${tag}"?`)) return;
+        const selected = [...TAG_SELECTED_DEVICES];
 
         delete CUSTOM_TAGS[tag];
+        CUSTOM_TAGS[newName] = selected;
 
         localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
 
-        activeTag = 'ALL';
+        activeTag = newName;
 
+        closeTagModal();
         buildTagBar();
         renderAll();
         buildTabs();
-      }
+
+        // restore default handler
+        initTagModalEvents();
+      };
+    }
+
+    function deleteTag(tag) {
+      if (!confirm(`Delete tag "${tag}"?`)) return;
+
+      delete CUSTOM_TAGS[tag];
+
+      localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
+
+      activeTag = 'ALL';
+
+      buildTagBar();
+      renderAll();
+      buildTabs();
+    }
 
 
-      function renderDeviceList(keyword) {
-        const wrap = document.getElementById('device-list');
-        if (!wrap) return;
+    function renderDeviceList(keyword) {
+      const wrap = document.getElementById('device-list');
+      if (!wrap) return;
 
-        wrap.innerHTML = '';
+      wrap.innerHTML = '';
 
-        DEVICES
-          .filter(d => d.id.toLowerCase().includes(keyword.toLowerCase()))
-          .forEach(d => {
-            const row = document.createElement('label');
-            row.className = 'device-item';
+      DEVICES
+        .filter(d => d.id.toLowerCase().includes(keyword.toLowerCase()))
+        .forEach(d => {
+          const row = document.createElement('label');
+          row.className = 'device-item';
 
-            const checked = TAG_SELECTED_DEVICES.has(d.id) ? 'checked' : '';
+          const checked = TAG_SELECTED_DEVICES.has(d.id) ? 'checked' : '';
 
-            row.innerHTML = `
+          row.innerHTML = `
           <input type="checkbox" value="${d.id}" ${checked} />
           <span>${d.id} (${d.type})</span>
         `;
 
-            const checkbox = row.querySelector('input');
+          const checkbox = row.querySelector('input');
 
-            checkbox.onchange = () => {
-              if (checkbox.checked) {
-                TAG_SELECTED_DEVICES.add(d.id);
-              } else {
-                TAG_SELECTED_DEVICES.delete(d.id);
-              }
-            };
-            wrap.appendChild(row);
-          });
-      }
-
-      function openCreateTagDialog() {
-        TAG_SELECTED_DEVICES = new Set();
-        document.getElementById('tag-modal').classList.add('show');
-        renderDeviceList('');
-      }
-
-      function buildTagBar() {
-        const tagBar = document.getElementById('tag-bar');
-        if (!tagBar) return;
-
-        tagBar.innerHTML = '';
-
-        // ALL
-        const allBtn = document.createElement('button');
-        allBtn.className = 'tag-btn' + (activeTag === 'ALL' ? ' active' : '');
-        allBtn.textContent = 'All';
-        allBtn.dataset.tag = 'ALL';
-        allBtn.onclick = () => setActiveTag('ALL');
-        tagBar.appendChild(allBtn);
-
-        // TYPE TAG
-        const types = [...new Set(DEVICES.map(d => d.type))];
-        types.forEach(type => {
-          const btn = document.createElement('button');
-          btn.className = 'tag-btn' + (activeTag === type ? ' active' : '');
-          btn.textContent = type;
-          btn.dataset.tag = type;
-          btn.onclick = () => setActiveTag(type);
-          tagBar.appendChild(btn);
-        });
-
-        // CUSTOM TAG
-        Object.keys(CUSTOM_TAGS).forEach(tag => {
-          const btn = document.createElement('button');
-
-          btn.className = 'tag-btn' + (activeTag === tag ? ' active' : '');
-          btn.dataset.tag = tag;
-
-          btn.style.display = 'flex';
-          btn.style.alignItems = 'center';
-          btn.style.gap = '6px';
-
-          // TEXT
-          const text = document.createElement('span');
-          text.textContent = tag;
-
-          // EDIT ICON
-          const edit = document.createElement('span');
-          edit.textContent = '+';
-          edit.style.fontSize = '11px';
-          edit.style.cursor = 'pointer';
-          edit.style.opacity = '0.7';
-          edit.style.color = '#1fdb8a';
-
-          edit.onclick = (e) => {
-            e.stopPropagation();
-            editTag(tag);
-          };
-          btn.ondblclick = () => editTag(tag);
-
-          // DELETE ICON
-          const del = document.createElement('span');
-          del.textContent = 'x';
-          del.style.color = '#f04444';
-          del.style.cursor = 'pointer';
-          del.style.fontWeight = 'bold';
-
-          del.onclick = (e) => {
-            e.stopPropagation();
-            deleteTag(tag);
-          };
-
-          btn.appendChild(text);
-          btn.appendChild(edit);
-          btn.appendChild(del);
-
-          // CLICK TAG
-          btn.onclick = () => setActiveTag(tag);
-
-          tagBar.appendChild(btn);
-        });
-
-        // ADD BUTTON
-        const addBtn = document.createElement('button');
-        addBtn.className = 'tag-add';
-        addBtn.textContent = '+ Create New Tag';
-        addBtn.onclick = openCreateTagDialog;
-        tagBar.appendChild(addBtn);
-      }
-
-      // Set active cho tag
-      function setActiveTag(tag) {
-        activeTag = tag;
-
-        const filtered = getFilteredDevices();
-
-        if (!filtered.length) {
-          activeTag = 'ALL';
-        }
-
-        if (!filtered.includes(selectedDevice)) {
-          selectedDevice = filtered[0] || null;
-        }
-
-        // update UI active
-        buildTagBar();
-        renderAll();
-        buildTabs();
-      }
-
-
-      // KHÔI PHỤC VẼ LINE & STEP & HIGHLIGHT TRÊN CHART
-      function drawChart(canvas, attr, dev) {
-        if (!canvas) return;
-        const isStep = !!attr.isDiscrete;
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.parentElement.getBoundingClientRect();
-        const W = rect.width, H = rect.height || 55;
-
-        canvas.width = W * dpr; canvas.height = H * dpr;
-        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-        const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
-
-        // 1. State bands 
-        dev.segments.forEach(seg => {
-          ctx.fillStyle = STATE_COLOR[seg.st] + '18';
-          ctx.fillRect(((seg.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((seg.e - seg.s) / (VIEW_END - VIEW_START)) * W, H);
-        });
-
-        // 2. Highlight command band (Nếu có click chọn)
-        if (highlightCmd) {
-          dev.commands.filter(c => c.name === highlightCmd).forEach(cmd => {
-            const color = CMD_COLOR[cmd.name] || '#888';
-            ctx.fillStyle = color + '28';
-            ctx.fillRect(((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((cmd.e - cmd.s) / (VIEW_END - VIEW_START)) * W, H);
-          });
-        }
-
-        // 3. Grid ngang & Labels Max/Min
-        ctx.strokeStyle = '#182030'; ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-          const y = (i / 4) * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-        }
-        ctx.fillStyle = '#354060'; ctx.font = '8px "JetBrains Mono", monospace';
-        ctx.fillText(attr.max, 2, 9);
-        ctx.fillText(attr.min, 2, H - 2);
-
-        // 4. Vẽ Chart chính (Line hoặc Step)
-        if (!attr.series || attr.series.length === 0) return;
-        const range = attr.max - attr.min || 1;
-        ctx.beginPath();
-        ctx.strokeStyle = attr.color;
-        ctx.lineWidth = 1.5;
-
-        if (isStep) {
-          for (let i = 0; i < attr.series.length - 1; i++) {
-            const p0 = attr.series[i], p1 = attr.series[i + 1];
-            const x0 = ((p0.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
-            const y0 = H - ((p0.v - attr.min) / range) * H;
-            const x1 = ((p1.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
-            const y1 = H - ((p1.v - attr.min) / range) * H;
-            if (i === 0) ctx.moveTo(x0, y0);
-            ctx.lineTo(x1, y0); ctx.lineTo(x1, y1);
-          }
-        } else {
-          attr.series.forEach((p, i) => {
-            const x = ((p.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
-            const y = H - ((p.v - attr.min) / range) * H;
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          });
-        }
-        ctx.stroke();
-
-        // 5. Fill Area (Đổ màu gradient dưới đường vẽ)
-        // Tái sử dụng path để fill cho mượt
-        ctx.lineTo(((attr.series[attr.series.length - 1].t - VIEW_START) / (VIEW_END - VIEW_START)) * W, H);
-        ctx.lineTo(((attr.series[0].t - VIEW_START) / (VIEW_END - VIEW_START)) * W, H);
-        ctx.closePath();
-        const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, attr.color + '38');
-        grad.addColorStop(1, attr.color + '00');
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // 6. COMMAND MARKERS (Đường kẻ dọc Command & Tên Command)
-        dev.commands.forEach(cmd => {
-          const color = CMD_COLOR[cmd.name] || '#888';
-          ctx.save();
-          ctx.setLineDash([2, 4]);
-
-          // Vẽ vạch Start của command
-          const xS = ((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W;
-          if (xS >= 0 && xS <= W) {
-            ctx.strokeStyle = color + '60';
-            ctx.beginPath(); ctx.moveTo(xS, 0); ctx.lineTo(xS, H); ctx.stroke();
-
-            // Hiện tên Command ở lane 0 (tránh đè nhau)
-            if (cmd.lane === 0) {
-              ctx.setLineDash([]);
-              ctx.fillStyle = color + 'cc';
-              ctx.font = '8px "JetBrains Mono", monospace';
-              ctx.fillText(cmd.name, xS + 4, 9);
-            }
-          }
-          ctx.restore();
-        });
-      }
-
-      function buildTimeline() {
-        const container = document.getElementById('rows-container');
-        if (!container) return;
-        container.innerHTML = '';
-        const devices = getFilteredDevices();
-
-        let lastBatch = null;
-
-        devices.forEach(dev => {
-          // 1. Hiển thị nhãn Batch nếu thay đổi
-          if (dev.batch !== lastBatch) {
-            const bl = document.createElement('div');
-            bl.className = 'batch-lbl';
-            bl.textContent = '⬡ ' + dev.batch.toUpperCase();
-            container.appendChild(bl);
-            lastBatch = dev.batch;
-          }
-
-          const grp = document.createElement('div');
-          grp.className = 'device-group' + (dev === selectedDevice ? ' active' : '');
-
-          // 2. STATE ROW
-          const sr = document.createElement('div');
-          sr.className = 'dev-row';
-
-          // Label bên trái
-          const sl = document.createElement('div');
-          sl.className = 'dev-label';
-          sl.innerHTML = `<span class="dev-name">${dev.id}</span><span class="dev-meta">${dev.type}</span>`;
-          sr.appendChild(sl);
-
-          // Track bên phải
-          const stTrack = document.createElement('div');
-          stTrack.className = 'track state-track';
-          dev.segments.forEach(seg => {
-            const el = document.createElement('div');
-            el.className = 'seg';
-            el.style.left = pct(seg.s);
-            el.style.width = pctW(seg.s, seg.e);
-            el.style.background = STATE_COLOR[seg.st];
-
-            // Hiện chữ trạng thái nếu đủ rộng
-            if (seg.e - seg.s > 5) {
-              const sp = document.createElement('span');
-              sp.textContent = seg.st.toUpperCase();
-              el.appendChild(sp);
-            }
-            stTrack.appendChild(el);
-          });
-          sr.appendChild(stTrack);
-          grp.appendChild(sr);
-
-          // 3. COMMAND ROW (Dòng lệnh - Hỗ trợ Parallel Lane)
-          const hasParallel = dev.commands.some(c => (c.lane || 0) > 0);
-          const cmdH = hasParallel ? 40 : 20; // Tăng chiều cao nếu có song song
-
-          const cr = document.createElement('div');
-          cr.className = 'dev-row';
-
-          const cl = document.createElement('div');
-          cl.className = 'row-sublabel';
-          cl.textContent = 'cmd';
-          cr.appendChild(cl);
-
-          // Track chứa các command
-          const ctTrack = document.createElement('div');
-          ctTrack.className = 'track cmd-track';
-          ctTrack.style.height = cmdH + 'px';
-
-          dev.commands.forEach(cmd => {
-            const el = document.createElement('div');
-            el.className = 'cmd-seg';
-            el.style.left = pct(cmd.s);
-            el.style.width = pctW(cmd.s, cmd.e);
-            el.style.background = (CMD_COLOR[cmd.name] || '#888') + 'cc';
-
-            // Xử lý vị trí theo Lane
-            if (hasParallel) {
-              const lh = (cmdH - 4) / 2; // Chiều cao mỗi lane
-              el.style.top = (2 + (cmd.lane || 0) * (lh + 2)) + 'px';
-              el.style.height = lh + 'px';
+          checkbox.onchange = () => {
+            if (checkbox.checked) {
+              TAG_SELECTED_DEVICES.add(d.id);
             } else {
-              el.style.top = '0';
-              el.style.height = '100%';
+              TAG_SELECTED_DEVICES.delete(d.id);
             }
+          };
+          wrap.appendChild(row);
+        });
+    }
 
-            // HIỂN THỊ TÊN COMMAND TRÊN TIMELINE
-            if (cmd.e - cmd.s >= 4) {
-              const sp = document.createElement('span');
-              sp.textContent = cmd.name;
-              el.appendChild(sp);
-            }
+    function openCreateTagDialog() {
+      TAG_SELECTED_DEVICES = new Set();
+      document.getElementById('tag-modal').classList.add('show');
+      renderDeviceList('');
+    }
 
-            // Sự kiện tương tác
-            el.addEventListener('mouseenter', e => showCmdTooltip(e, dev, cmd));
-            el.addEventListener('mouseleave', hideTooltip);
-            el.addEventListener('click', () => {
-              highlightCmd = cmd.name;
-              buildAttrPanel(); // Re-render charts để hiện highlight
-            });
+    function buildTagBar() {
+      const tagBar = document.getElementById('tag-bar');
+      if (!tagBar) return;
 
-            ctTrack.appendChild(el);
-          });
-          cr.appendChild(ctTrack);
-          grp.appendChild(cr);
+      tagBar.innerHTML = '';
 
-          container.appendChild(grp);
+      // ALL
+      const allBtn = document.createElement('button');
+      allBtn.className = 'tag-btn' + (activeTag === 'ALL' ? ' active' : '');
+      allBtn.textContent = 'All';
+      allBtn.dataset.tag = 'ALL';
+      allBtn.onclick = () => setActiveTag('ALL');
+      tagBar.appendChild(allBtn);
+
+      // TYPE TAG
+      const types = [...new Set(DEVICES.map(d => d.type))];
+      types.forEach(type => {
+        const btn = document.createElement('button');
+        btn.className = 'tag-btn' + (activeTag === type ? ' active' : '');
+        btn.textContent = type;
+        btn.dataset.tag = type;
+        btn.onclick = () => setActiveTag(type);
+        tagBar.appendChild(btn);
+      });
+
+      // CUSTOM TAG
+      Object.keys(CUSTOM_TAGS).forEach(tag => {
+        const btn = document.createElement('button');
+
+        btn.className = 'tag-btn' + (activeTag === tag ? ' active' : '');
+        btn.dataset.tag = tag;
+
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '6px';
+
+        // TEXT
+        const text = document.createElement('span');
+        text.textContent = tag;
+
+        // EDIT ICON
+        const edit = document.createElement('span');
+        edit.textContent = '+';
+        edit.style.fontSize = '11px';
+        edit.style.cursor = 'pointer';
+        edit.style.opacity = '0.7';
+        edit.style.color = '#1fdb8a';
+
+        edit.onclick = (e) => {
+          e.stopPropagation();
+          editTag(tag);
+        };
+        btn.ondblclick = () => editTag(tag);
+
+        // DELETE ICON
+        const del = document.createElement('span');
+        del.textContent = 'x';
+        del.style.color = '#f04444';
+        del.style.cursor = 'pointer';
+        del.style.fontWeight = 'bold';
+
+        del.onclick = (e) => {
+          e.stopPropagation();
+          deleteTag(tag);
+        };
+
+        btn.appendChild(text);
+        btn.appendChild(edit);
+        btn.appendChild(del);
+
+        // CLICK TAG
+        btn.onclick = () => setActiveTag(tag);
+
+        tagBar.appendChild(btn);
+      });
+
+      // ADD BUTTON
+      const addBtn = document.createElement('button');
+      addBtn.className = 'tag-add';
+      addBtn.textContent = '+ Create New Tag';
+      addBtn.onclick = openCreateTagDialog;
+      tagBar.appendChild(addBtn);
+    }
+
+    // Set active cho tag
+    function setActiveTag(tag) {
+      activeTag = tag;
+
+      const filtered = getFilteredDevices();
+
+      if (!filtered.length) {
+        activeTag = 'ALL';
+      }
+
+      if (!filtered.includes(selectedDevice)) {
+        selectedDevice = filtered[0] || null;
+      }
+
+      // update UI active
+      buildTagBar();
+      renderAll();
+      buildTabs();
+    }
+
+
+    // KHÔI PHỤC VẼ LINE & STEP & HIGHLIGHT TRÊN CHART
+    function drawChart(canvas, attr, dev) {
+      if (!canvas) return;
+      const isStep = !!attr.isDiscrete;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const W = rect.width, H = rect.height || 55;
+
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+
+      // 1. State bands 
+      dev.segments.forEach(seg => {
+        ctx.fillStyle = STATE_COLOR[seg.st] + '18';
+        ctx.fillRect(((seg.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((seg.e - seg.s) / (VIEW_END - VIEW_START)) * W, H);
+      });
+
+      // 2. Highlight command band (Nếu có click chọn)
+      if (highlightCmd) {
+        dev.commands.filter(c => c.name === highlightCmd).forEach(cmd => {
+          const color = CMD_COLOR[cmd.name] || '#888';
+          ctx.fillStyle = color + '28';
+          ctx.fillRect(((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W, 0, ((cmd.e - cmd.s) / (VIEW_END - VIEW_START)) * W, H);
         });
       }
 
-      function buildAxis() {
-        const ax = document.getElementById('time-axis'); if (!ax) return;
-        ax.innerHTML = '<div></div>';
-        const ticksWrap = document.createElement('div'); ticksWrap.style.display = 'flex'; ticksWrap.style.width = '100%';
-        const step = (VIEW_END - VIEW_START) / 6;
-        for (let i = 0; i <= 6; i++) {
-          const d = document.createElement('div'); d.className = 'tick'; d.style.flex = '1';
-          d.textContent = fmtTime(VIEW_START + step * i); ticksWrap.appendChild(d);
-        }
-        ax.appendChild(ticksWrap);
+      // 3. Grid ngang & Labels Max/Min
+      ctx.strokeStyle = '#182030'; ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = (i / 4) * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
+      ctx.fillStyle = '#354060'; ctx.font = '8px "JetBrains Mono", monospace';
+      ctx.fillText(attr.max, 2, 9);
+      ctx.fillText(attr.min, 2, H - 2);
 
-      // BUILD TAB DEVICES TYPE
-      function buildTabs() {
-        const wrap = document.getElementById('device-tabs');
-        if (!wrap) return;
+      // 4. Vẽ Chart chính (Line hoặc Step)
+      if (!attr.series || attr.series.length === 0) return;
+      const range = attr.max - attr.min || 1;
+      ctx.beginPath();
+      ctx.strokeStyle = attr.color;
+      ctx.lineWidth = 1.5;
 
-        wrap.innerHTML = '';
+      if (isStep) {
+        for (let i = 0; i < attr.series.length - 1; i++) {
+          const p0 = attr.series[i], p1 = attr.series[i + 1];
+          const x0 = ((p0.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y0 = H - ((p0.v - attr.min) / range) * H;
+          const x1 = ((p1.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y1 = H - ((p1.v - attr.min) / range) * H;
+          if (i === 0) ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y0); ctx.lineTo(x1, y1);
+        }
+      } else {
+        attr.series.forEach((p, i) => {
+          const x = ((p.t - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+          const y = H - ((p.v - attr.min) / range) * H;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+      }
+      ctx.stroke();
 
-        const devices = getFilteredDevices();
+      // 5. Fill Area (Đổ màu gradient dưới đường vẽ)
+      // Tái sử dụng path để fill cho mượt
+      ctx.lineTo(((attr.series[attr.series.length - 1].t - VIEW_START) / (VIEW_END - VIEW_START)) * W, H);
+      ctx.lineTo(((attr.series[0].t - VIEW_START) / (VIEW_END - VIEW_START)) * W, H);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, attr.color + '38');
+      grad.addColorStop(1, attr.color + '00');
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-        devices.forEach(dev => {
-          const b = document.createElement('button');
-          b.className = 'dtab' + (dev === selectedDevice ? ' active' : '');
-          b.innerHTML = `
+      // 6. COMMAND MARKERS (Đường kẻ dọc Command & Tên Command)
+      dev.commands.forEach(cmd => {
+        const color = CMD_COLOR[cmd.name] || '#888';
+        ctx.save();
+        ctx.setLineDash([2, 4]);
+
+        // Vẽ vạch Start của command
+        const xS = ((cmd.s - VIEW_START) / (VIEW_END - VIEW_START)) * W;
+        if (xS >= 0 && xS <= W) {
+          ctx.strokeStyle = color + '60';
+          ctx.beginPath(); ctx.moveTo(xS, 0); ctx.lineTo(xS, H); ctx.stroke();
+
+          // Hiện tên Command ở lane 0 (tránh đè nhau)
+          if (cmd.lane === 0) {
+            ctx.setLineDash([]);
+            ctx.fillStyle = color + 'cc';
+            ctx.font = '8px "JetBrains Mono", monospace';
+            ctx.fillText(cmd.name, xS + 4, 9);
+          }
+        }
+        ctx.restore();
+      });
+    }
+
+    function buildTimeline() {
+      const container = document.getElementById('rows-container');
+      if (!container) return;
+      container.innerHTML = '';
+      const devices = getFilteredDevices();
+
+      let lastBatch = null;
+
+      devices.forEach(dev => {
+        // 1. Hiển thị nhãn Batch nếu thay đổi
+        if (dev.batch !== lastBatch) {
+          const bl = document.createElement('div');
+          bl.className = 'batch-lbl';
+          bl.textContent = '⬡ ' + dev.batch.toUpperCase();
+          container.appendChild(bl);
+          lastBatch = dev.batch;
+        }
+
+        const grp = document.createElement('div');
+        grp.className = 'device-group' + (dev === selectedDevice ? ' active' : '');
+
+        // 2. STATE ROW
+        const sr = document.createElement('div');
+        sr.className = 'dev-row';
+
+        // Label bên trái
+        const sl = document.createElement('div');
+        sl.className = 'dev-label';
+        sl.innerHTML = `<span class="dev-name">${dev.id}</span><span class="dev-meta">${dev.type}</span>`;
+        sr.appendChild(sl);
+
+        // Track bên phải
+        const stTrack = document.createElement('div');
+        stTrack.className = 'track state-track';
+        dev.segments.forEach(seg => {
+          const el = document.createElement('div');
+          el.className = 'seg';
+          el.style.left = pct(seg.s);
+          el.style.width = pctW(seg.s, seg.e);
+          el.style.background = STATE_COLOR[seg.st];
+
+          // Hiện chữ trạng thái nếu đủ rộng
+          if (seg.e - seg.s > 5) {
+            const sp = document.createElement('span');
+            sp.textContent = seg.st.toUpperCase();
+            el.appendChild(sp);
+          }
+          stTrack.appendChild(el);
+        });
+        sr.appendChild(stTrack);
+        grp.appendChild(sr);
+
+        // 3. COMMAND ROW (Dòng lệnh - Hỗ trợ Parallel Lane)
+        const hasParallel = dev.commands.some(c => (c.lane || 0) > 0);
+        const cmdH = hasParallel ? 40 : 20; // Tăng chiều cao nếu có song song
+
+        const cr = document.createElement('div');
+        cr.className = 'dev-row';
+
+        const cl = document.createElement('div');
+        cl.className = 'row-sublabel';
+        cl.textContent = 'cmd';
+        cr.appendChild(cl);
+
+        // Track chứa các command
+        const ctTrack = document.createElement('div');
+        ctTrack.className = 'track cmd-track';
+        ctTrack.style.height = cmdH + 'px';
+
+        dev.commands.forEach(cmd => {
+          const el = document.createElement('div');
+          el.className = 'cmd-seg';
+          el.style.left = pct(cmd.s);
+          el.style.width = pctW(cmd.s, cmd.e);
+          el.style.background = (CMD_COLOR[cmd.name] || '#888') + 'cc';
+
+          // Xử lý vị trí theo Lane
+          if (hasParallel) {
+            const lh = (cmdH - 4) / 2; // Chiều cao mỗi lane
+            el.style.top = (2 + (cmd.lane || 0) * (lh + 2)) + 'px';
+            el.style.height = lh + 'px';
+          } else {
+            el.style.top = '0';
+            el.style.height = '100%';
+          }
+
+          // HIỂN THỊ TÊN COMMAND TRÊN TIMELINE
+          if (cmd.e - cmd.s >= 4) {
+            const sp = document.createElement('span');
+            sp.textContent = cmd.name;
+            el.appendChild(sp);
+          }
+
+          // Sự kiện tương tác
+          el.addEventListener('mouseenter', e => showCmdTooltip(e, dev, cmd));
+          el.addEventListener('mouseleave', hideTooltip);
+          el.addEventListener('click', () => {
+            highlightCmd = cmd.name;
+            buildAttrPanel(); // Re-render charts để hiện highlight
+          });
+
+          ctTrack.appendChild(el);
+        });
+        cr.appendChild(ctTrack);
+        grp.appendChild(cr);
+
+        container.appendChild(grp);
+      });
+    }
+
+    function buildAxis() {
+      const ax = document.getElementById('time-axis'); if (!ax) return;
+      ax.innerHTML = '<div></div>';
+      const ticksWrap = document.createElement('div'); ticksWrap.style.display = 'flex'; ticksWrap.style.width = '100%';
+      const step = (VIEW_END - VIEW_START) / 6;
+      for (let i = 0; i <= 6; i++) {
+        const d = document.createElement('div'); d.className = 'tick'; d.style.flex = '1';
+        d.textContent = fmtTime(VIEW_START + step * i); ticksWrap.appendChild(d);
+      }
+      ax.appendChild(ticksWrap);
+    }
+
+    // BUILD TAB DEVICES TYPE
+    function buildTabs() {
+      const wrap = document.getElementById('device-tabs');
+      if (!wrap) return;
+
+      wrap.innerHTML = '';
+
+      const devices = getFilteredDevices();
+
+      devices.forEach(dev => {
+        const b = document.createElement('button');
+        b.className = 'dtab' + (dev === selectedDevice ? ' active' : '');
+        b.innerHTML = `
       <span class="state-dot" style="background:${STATE_COLOR[dev.lastState]}"></span>
       ${dev.id}
     `;
 
-          b.onclick = () => {
-            selectedDevice = dev;
-            activeAttrs = new Set(dev.attrs.map(a => a.key));
-            buildTabs();
-            buildAttrPanel();
-          };
+        b.onclick = () => {
+          selectedDevice = dev;
+          activeAttrs = new Set(dev.attrs.map(a => a.key));
+          buildTabs();
+          buildAttrPanel();
+          buildTimeline();
+        };
 
-          wrap.appendChild(b);
-        });
+        wrap.appendChild(b);
+      });
+    }
+
+    function buildAttrPanel() {
+      const dev = selectedDevice;
+      if (!dev) {
+        document.getElementById('attr-panel-title').textContent = 'No device';
+        document.getElementById('charts-section').innerHTML = '';
+        return;
       }
+      document.getElementById('attr-panel-title').textContent = `Attributes — ${dev.id}`;
 
-      function buildAttrPanel() {
-        const dev = selectedDevice;
-        if (!dev) {
-          document.getElementById('attr-panel-title').textContent = 'No device';
-          document.getElementById('charts-section').innerHTML = '';
-          return;
+      // 1. Toggles
+      const tw = document.getElementById('attr-toggles');
+      tw.innerHTML = '<span style="font-size:10px; color:var(--muted); align-self:center; font-family:\'JetBrains Mono\'">Show:</span>';
+
+      dev.attrs.forEach(attr => {
+        const on = activeAttrs.has(attr.key);
+        const b = document.createElement('button');
+        b.className = 'attr-toggle' + (on ? ' on' : '');
+        b.textContent = attr.label;
+        b.style.fontFamily = '"JetBrains Mono", monospace';
+        if (on) {
+          b.style.borderColor = attr.color;
+          b.style.color = attr.color;
         }
-        document.getElementById('attr-panel-title').textContent = `Attributes — ${dev.id}`;
+        b.onclick = () => {
+          activeAttrs.has(attr.key) ? activeAttrs.delete(attr.key) : activeAttrs.add(attr.key);
+          buildAttrPanel();
+        };
+        tw.appendChild(b);
+      });
 
-        // 1. Toggles
-        const tw = document.getElementById('attr-toggles');
-        tw.innerHTML = '<span style="font-size:10px; color:var(--muted); align-self:center; font-family:\'JetBrains Mono\'">Show:</span>';
+      // 2. Render Charts Section
+      const cs = document.getElementById('charts-section');
+      cs.innerHTML = '';
+      dev.attrs.filter(a => activeAttrs.has(a.key)).forEach(attr => {
+        const row = document.createElement('div');
+        row.className = 'chart-row';
 
-        dev.attrs.forEach(attr => {
-          const on = activeAttrs.has(attr.key);
-          const b = document.createElement('button');
-          b.className = 'attr-toggle' + (on ? ' on' : '');
-          b.textContent = attr.label;
-          b.style.fontFamily = '"JetBrains Mono", monospace';
-          if (on) {
-            b.style.borderColor = attr.color;
-            b.style.color = attr.color;
-          }
-          b.onclick = () => {
-            activeAttrs.has(attr.key) ? activeAttrs.delete(attr.key) : activeAttrs.add(attr.key);
-            buildAttrPanel();
-          };
-          tw.appendChild(b);
-        });
+        // Lấy giá trị hiện tại tại vị trí hover
+        const p = getValueAt(attr.series, hoverT ?? MIN_T, attr.isDiscrete);
+        const curVal = formatValue(p, attr);
 
-        // 2. Render Charts Section
-        const cs = document.getElementById('charts-section');
-        cs.innerHTML = '';
-        dev.attrs.filter(a => activeAttrs.has(a.key)).forEach(attr => {
-          const row = document.createElement('div');
-          row.className = 'chart-row';
-
-          // Lấy giá trị hiện tại tại vị trí hover
-          const p = getValueAt(attr.series, hoverT ?? MIN_T, attr.isDiscrete);
-          const curVal = formatValue(p, attr);
-
-          row.innerHTML = `
+        row.innerHTML = `
             <div class="chart-ylabel">
                 <div class="yn">${attr.label}</div>
                 <div class="yv" style="color:${attr.color}" id="yv-${attr.key}">${curVal}</div>
@@ -1455,180 +1505,187 @@
                 <div class="cdot" id="cd-${attr.key}" style="background:${attr.color}"></div>
             </div>
         `;
-          cs.appendChild(row);
+        cs.appendChild(row);
 
-          // Vẽ chart sau khi DOM đã sẵn sàng
-          const canvas = row.querySelector('canvas');
-          requestAnimationFrame(() => drawChart(canvas, attr, dev));
+        // Vẽ chart sau khi DOM đã sẵn sàng
+        const canvas = row.querySelector('canvas');
+        requestAnimationFrame(() => drawChart(canvas, attr, dev));
 
-          // Event hover đồng bộ
-          const area = row.querySelector('.chart-area');
-          area.onmousemove = (e) => {
-            const rect = area.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            hoverT = VIEW_START + (x / rect.width) * (VIEW_END - VIEW_START);
-            updateInfoBar(hoverT);
-            updateChartCursors(hoverT);
+        // Event hover đồng bộ
+        const area = row.querySelector('.chart-area');
+        area.onmousemove = (e) => {
+          const rect = area.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          hoverT = VIEW_START + (x / rect.width) * (VIEW_END - VIEW_START);
+          updateInfoBar(hoverT);
+          updateChartCursors(hoverT);
 
-            // Đồng bộ Cursor Timeline
-            const labelEl = document.querySelector('.dev-label');
-            const LABEL_W = labelEl ? labelEl.getBoundingClientRect().width : 120;
-            const tlCursor = document.getElementById('tl-cursor');
-            if (tlCursor) {
-              tlCursor.style.display = 'block';
-              tlCursor.style.left = (LABEL_W + x) + 'px';
-              document.getElementById('cursor-lbl').textContent = fmtTime(hoverT);
-            }
-          };
-        });
-      }
-
-      function renderAll() {
-        buildAxis();
-        buildTimeline();
-        buildAttrPanel();
-      }
-
-      function initTagModalEvents() {
-        document.getElementById('device-search')
-          .addEventListener('input', (e) => {
-            renderDeviceList(e.target.value);
-          });
-
-
-        const createBtn = document.getElementById('tag-create-btn');
-        createBtn.onclick = null;
-        createBtn.onclick = () => {
-          const name = document.getElementById('tag-name-input').value.trim();
-          if (!name) return alert('Enter tag name');
-
-          if (CUSTOM_TAGS[name]) {
-            return alert('Tag already exists');
+          // Đồng bộ Cursor Timeline
+          const labelEl = document.querySelector('.dev-label');
+          const LABEL_W = labelEl ? labelEl.getBoundingClientRect().width : 120;
+          const tlCursor = document.getElementById('tl-cursor');
+          if (tlCursor) {
+            tlCursor.style.display = 'block';
+            tlCursor.style.left = (LABEL_W + x) + 'px';
+            document.getElementById('cursor-lbl').textContent = fmtTime(hoverT);
           }
-
-          const ids = [...TAG_SELECTED_DEVICES]
-
-          if (ids.length === 0) {
-            return alert('Select at least one device');
-          }
-
-          CUSTOM_TAGS[name] = ids;
-
-          localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
-
-          activeTag = name;
-
-          closeTagModal();
-          buildTagBar();
-          renderAll();
-          buildTabs();
         };
+      });
+    }
 
-        // CLOSE TAG
-        document.getElementById('tag-close').onclick = closeTagModal;
+    function renderAll() {
+      buildAxis();
+      buildTimeline();
+      buildAttrPanel();
+    }
 
-        // SELECT ALL
-        document.getElementById('select-all-dev').onclick = () => {
-          DEVICES.forEach(d => TAG_SELECTED_DEVICES.add(d.id));
-          renderDeviceList(document.getElementById('device-search').value);
-        };
-
-        // DESELECT ALL
-        document.getElementById('deselect-all-dev').onclick = () => {
-          TAG_SELECTED_DEVICES.clear();
-          renderDeviceList(document.getElementById('device-search').value);
-        };
-      }
-
-      // ==========================================
-      // 5. INITIALIZATION & INTERACTION
-      // ==========================================
-      window.onload = function () {
-        CUSTOM_TAGS = JSON.parse(localStorage.getItem('customTags') || '{}');
-        recomputeTime();
-        if (DEVICES.length > 0) {
-          selectedDevice = DEVICES[0];
-          activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
-          buildTagBar();
-          renderAll();
-          buildLegend();
-          buildTabs();
-        }
-
-        const tlWrap = document.getElementById('tl-wrap');
-        let isDragging = false, lastX = 0;
-
-        tlWrap?.addEventListener('wheel', (e) => {
-          e.preventDefault();
-          const rect = tlWrap.getBoundingClientRect();
-          const LABEL_W = document.querySelector('.dev-label')?.getBoundingClientRect().width || 120;
-          const trackW = rect.width - LABEL_W - 14;
-          const mouseX = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
-          const mouseRatio = mouseX / trackW;
-          const range = VIEW_END - VIEW_START;
-          const zoomAmount = range * 0.1 * (e.deltaY < 0 ? 1 : -1);
-          VIEW_START += zoomAmount * mouseRatio; VIEW_END -= zoomAmount * (1 - mouseRatio);
-          VIEW_START = Math.max(MIN_T, VIEW_START); VIEW_END = Math.min(MAX_T, VIEW_END);
-          renderAll();
-        });
-
-        tlWrap?.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; });
-        window.addEventListener('mouseup', () => isDragging = false);
-        tlWrap?.addEventListener('mousemove', e => {
-          const rect = tlWrap.getBoundingClientRect();
-          const LABEL_W = document.querySelector('.dev-label')?.getBoundingClientRect().width || 120;
-          const trackW = rect.width - LABEL_W - 14;
-          if (isDragging) {
-            const dx = e.clientX - lastX; lastX = e.clientX;
-            const dt = (dx / trackW) * (VIEW_END - VIEW_START);
-            VIEW_START -= dt; VIEW_END -= dt; renderAll();
-          }
-          const x = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
-          hoverT = VIEW_START + (x / trackW) * (VIEW_END - VIEW_START);
-          const cursor = document.getElementById('tl-cursor');
-          if (cursor) { cursor.style.display = 'block'; cursor.style.left = (LABEL_W + x) + 'px'; document.getElementById('cursor-lbl').textContent = fmtTime(hoverT); }
-          updateInfoBar(hoverT); updateChartCursors(hoverT);
-        });
-
-        tlWrap?.addEventListener('mouseleave', () => {
-          document.getElementById('tl-cursor').style.display = 'none';
-          hideChartCursors();
-        });
-
-        tlWrap?.addEventListener('dblclick', () => { VIEW_START = MIN_T; VIEW_END = MAX_T; renderAll(); });
-
-        document.getElementById('fileInput')?.addEventListener('change', function (e) {
-          const file = e.target.files[0]; if (!file) return;
-          const nameDisplay = document.getElementById('fileName');
-          if (file) {
-            nameDisplay.textContent = file.name;
-            nameDisplay.classList.add('active');
-
-          }
-
-          const reader = new FileReader();
-          reader.onload = function (evt) {
-            DEVICES = JSON.parse(evt.target.result);
-            if (DEVICES.length > 0) {
-              activeTag = "ALL";
-              selectedDevice = DEVICES[0];
-              activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
-              buildTagBar();
-              recomputeTime();
-              renderAll();
-              buildLegend();
-              buildTabs();
-            }
-          };
-          reader.readAsText(file);
-        });
-
-        document.getElementById('device-search').addEventListener('input', (e) => {
+    function initTagModalEvents() {
+      document.getElementById('device-search')
+        .addEventListener('input', (e) => {
           renderDeviceList(e.target.value);
         });
 
-        initTagModalEvents();
+
+      const createBtn = document.getElementById('tag-create-btn');
+      createBtn.onclick = null;
+      createBtn.onclick = () => {
+        const name = document.getElementById('tag-name-input').value.trim();
+        if (!name) return alert('Enter tag name');
+
+        if (CUSTOM_TAGS[name]) {
+          return alert('Tag already exists');
+        }
+
+        const ids = [...TAG_SELECTED_DEVICES]
+
+        if (ids.length === 0) {
+          return alert('Select at least one device');
+        }
+
+        CUSTOM_TAGS[name] = ids;
+
+        localStorage.setItem('customTags', JSON.stringify(CUSTOM_TAGS));
+
+        activeTag = name;
+
+        closeTagModal();
+        buildTagBar();
+        renderAll();
+        buildTabs();
       };
+
+      // CLOSE TAG
+      document.getElementById('tag-close').onclick = closeTagModal;
+
+      // SELECT ALL
+      document.getElementById('select-all-dev').onclick = () => {
+        DEVICES.forEach(d => TAG_SELECTED_DEVICES.add(d.id));
+        renderDeviceList(document.getElementById('device-search').value);
+      };
+
+      // DESELECT ALL
+      document.getElementById('deselect-all-dev').onclick = () => {
+        TAG_SELECTED_DEVICES.clear();
+        renderDeviceList(document.getElementById('device-search').value);
+      };
+    }
+
+    // ==========================================
+    // 5. INITIALIZATION & INTERACTION
+    // ==========================================
+    window.addEventListener('load', function () {
+      CUSTOM_TAGS = JSON.parse(localStorage.getItem('customTags') || '{}');
+      recomputeTime();
+      if (DEVICES.length > 0) {
+        selectedDevice = DEVICES[0];
+        activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
+        buildTagBar();
+        renderAll();
+        buildLegend();
+        buildTabs();
+      }
+
+      const tlWrap = document.getElementById('tl-wrap');
+      let isDragging = false, lastX = 0;
+
+      tlWrap?.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = tlWrap.getBoundingClientRect();
+        const LABEL_W = document.querySelector('.dev-label')?.getBoundingClientRect().width || 120;
+        const trackW = rect.width - LABEL_W - 14;
+        const mouseX = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
+        const mouseRatio = mouseX / trackW;
+        const range = VIEW_END - VIEW_START;
+        const zoomAmount = range * 0.1 * (e.deltaY < 0 ? 1 : -1);
+        VIEW_START += zoomAmount * mouseRatio; VIEW_END -= zoomAmount * (1 - mouseRatio);
+        VIEW_START = Math.max(MIN_T, VIEW_START); VIEW_END = Math.min(MAX_T, VIEW_END);
+        renderAll();
+      });
+
+      tlWrap?.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; });
+      window.addEventListener('mouseup', () => isDragging = false);
+      tlWrap?.addEventListener('mousemove', e => {
+        const rect = tlWrap.getBoundingClientRect();
+        const LABEL_W = document.querySelector('.dev-label')?.getBoundingClientRect().width || 120;
+        const trackW = rect.width - LABEL_W - 14;
+        if (isDragging) {
+          const dx = e.clientX - lastX; lastX = e.clientX;
+          const dt = (dx / trackW) * (VIEW_END - VIEW_START);
+          VIEW_START -= dt; VIEW_END -= dt; renderAll();
+        }
+        const x = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
+        hoverT = VIEW_START + (x / trackW) * (VIEW_END - VIEW_START);
+        const cursor = document.getElementById('tl-cursor');
+        if (cursor) { cursor.style.display = 'block'; cursor.style.left = (LABEL_W + x) + 'px'; document.getElementById('cursor-lbl').textContent = fmtTime(hoverT); }
+        updateInfoBar(hoverT); updateChartCursors(hoverT);
+      });
+
+      tlWrap?.addEventListener('mouseleave', () => {
+        document.getElementById('tl-cursor').style.display = 'none';
+        hideChartCursors();
+      });
+
+      tlWrap?.addEventListener('dblclick', () => { VIEW_START = MIN_T; VIEW_END = MAX_T; renderAll(); });
+
+      document.getElementById('fileInput')?.addEventListener('change', function (e) {
+        const file = e.target.files[0]; if (!file) return;
+        const nameDisplay = document.getElementById('fileName');
+        if (file) {
+          nameDisplay.textContent = file.name;
+          nameDisplay.classList.add('active');
+
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          const data = JSON.parse(evt.target.result);
+          loadData(data);
+          if (DEVICES.length > 0) {
+            activeTag = "ALL";
+            selectedDevice = DEVICES[0];
+            activeAttrs = new Set(selectedDevice.attrs.map(a => a.key));
+            buildTagBar();
+            recomputeTime();
+            renderAll();
+            buildLegend();
+            buildTabs();
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      document.getElementById('device-search').addEventListener('input', (e) => {
+        renderDeviceList(e.target.value);
+      });
+
+      initTagModalEvents();
+    });
+
+    // Cho WPF gọi
+    window.setDevicesFromWpf = function (data) {
+      console.log("Received data from WPF", data);
+      loadData(data);
+    };
   </script>
 </body>
 
