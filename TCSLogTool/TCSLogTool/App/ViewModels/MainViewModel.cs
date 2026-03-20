@@ -133,7 +133,11 @@ public partial class MainViewModel : ObservableObject
     {
         var json = JsonExportService.Export(devices);
 
-        var htmlPath = @"C:\Users\Thang10136\TCSLogToolWPF\TCSLogTool\TCSLogTool.html";
+        var htmlPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "Assets",
+            "TCSLogTool.html"
+        );
 
         var tempHtml = Path.Combine(Path.GetTempPath(), "tcs_viewer.html");
 
