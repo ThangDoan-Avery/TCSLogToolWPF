@@ -728,6 +728,12 @@
       <h1>⬡ Device Command Log — Full Stack</h1>
       <div class="sub">State · Commands · Attribute Time-series · Synchronized Cursor</div>
     </div>
+    <div style="margin-bottom: 8px;">
+      <label>
+        <input type="checkbox" id="tzToggle">
+        Show Time As Log Time
+      </label>
+    </div>
     <div class="import-wrapper">
       <label for="fileInput" class="import-btn-label">
         <span>IMPORT FILE</span>
@@ -794,6 +800,7 @@
     let VIEW_START, VIEW_END, MIN_T, MAX_T;
     let ALL_TIMES = [];
     let TAG_SELECTED_DEVICES = new Set();
+    let LOG_OFFSET = 0;
 
     const STATE_COLOR = { IDLE: '#243050', Ready: '#1fdb8a', Busy: '#f5a623', Fault: '#f04444' };
     const CMD_COLOR = {
@@ -812,9 +819,37 @@
     // ==========================================
     function pct(s) { return ((s - VIEW_START) / (VIEW_END - VIEW_START) * 100) + '%'; }
     function pctW(s, e) { return ((e - s) / (VIEW_END - VIEW_START) * 100) + '%'; }
-    function fmtTime(ts) {
+
+    // Toggle Log Time
+    let useLogTime = false;
+
+    function fmtTime(ts, offsetMinutes = 0) {
+
       if (!ts || isNaN(ts)) return "00:00:00.000";
-      return new Date(ts).toISOString().substr(11, 12);
+
+      const d = new Date(ts);
+
+      let hh, mm, ss, ms;
+
+      if (useLogTime) {
+
+        const d2 = new Date(ts + offsetMinutes * 60000);
+
+        hh = String(d2.getUTCHours()).padStart(2, '0');
+        mm = String(d2.getUTCMinutes()).padStart(2, '0');
+        ss = String(d2.getUTCSeconds()).padStart(2, '0');
+        ms = String(d2.getUTCMilliseconds()).padStart(3, '0');
+
+      } else {
+
+        hh = String(d.getHours()).padStart(2, '0');
+        mm = String(d.getMinutes()).padStart(2, '0');
+        ss = String(d.getSeconds()).padStart(2, '0');
+        ms = String(d.getMilliseconds()).padStart(3, '0');
+
+      }
+
+      return `${hh}:${mm}:${ss}.${ms}`;
     }
     function formatDuration(ms) {
       if (ms < 1000) return ms + ' ms';
@@ -901,8 +936,8 @@
       tt.innerHTML = `
             <div class="tt-title" style="color:${color}">${cmd.name}</div>
             <div class="tt-row"><span class="tt-label">Device:</span><span class="tt-val">${dev.id}</span></div>
-            <div class="tt-row"><span class="tt-label">Start:</span><span class="tt-val">${fmtTime(cmd.s)}</span></div>
-            <div class="tt-row"><span class="tt-label">End:</span><span class="tt-val">${fmtTime(cmd.e)}</span></div>
+            <div class="tt-row"><span class="tt-label">Start:</span><span class="tt-val">${fmtTime(cmd.s, LOG_OFFSET)}</span></div>
+            <div class="tt-row"><span class="tt-label">End:</span><span class="tt-val">${fmtTime(cmd.e, LOG_OFFSET)}</span></div>
             <div class="tt-row"><span class="tt-label">Duration:</span>
               <span class="tt-val" style="color:#fff; font-weight:bold">${formatDuration(cmd.e - cmd.s)}</span>
             </div>
@@ -918,7 +953,7 @@
     function updateInfoBar(t) {
       const ib = document.getElementById('info-bar');
       if (!ib) return;
-      let html = `<span style="color:var(--muted2)">${fmtTime(t)}</span>`;
+      let html = `<span style="color:var(--muted2)">${fmtTime(t, LOG_OFFSET)}</span>`;
       const devices = getFilteredDevices();
       devices.forEach(dev => {
         const st = getStateAt(dev, t), cmds = getCmdsAt(dev, t);
@@ -948,6 +983,7 @@
 
     function loadData(data) {
       DEVICES = data || [];
+      LOG_OFFSET = DEVICES[0]?.offset || 0;
 
       if (DEVICES.length > 0) {
         activeTag = "ALL";
@@ -1418,7 +1454,7 @@
       const step = (VIEW_END - VIEW_START) / 6;
       for (let i = 0; i <= 6; i++) {
         const d = document.createElement('div'); d.className = 'tick'; d.style.flex = '1';
-        d.textContent = fmtTime(VIEW_START + step * i); ticksWrap.appendChild(d);
+        d.textContent = fmtTime(VIEW_START + step * i, LOG_OFFSET); ticksWrap.appendChild(d);
       }
       ax.appendChild(ticksWrap);
     }
@@ -1527,7 +1563,7 @@
           if (tlCursor) {
             tlCursor.style.display = 'block';
             tlCursor.style.left = (LABEL_W + x) + 'px';
-            document.getElementById('cursor-lbl').textContent = fmtTime(hoverT);
+            document.getElementById('cursor-lbl').textContent = fmtTime(hoverT, LOG_OFFSET);
           }
         };
       });
@@ -1636,8 +1672,12 @@
         const x = Math.max(0, Math.min(trackW, e.clientX - rect.left - LABEL_W));
         hoverT = VIEW_START + (x / trackW) * (VIEW_END - VIEW_START);
         const cursor = document.getElementById('tl-cursor');
-        if (cursor) { cursor.style.display = 'block'; cursor.style.left = (LABEL_W + x) + 'px'; document.getElementById('cursor-lbl').textContent = fmtTime(hoverT); }
-        updateInfoBar(hoverT); updateChartCursors(hoverT);
+        if (cursor) { 
+          cursor.style.display = 'block'; 
+          cursor.style.left = (LABEL_W + x) + 'px'; 
+          document.getElementById('cursor-lbl').textContent = fmtTime(hoverT, LOG_OFFSET); }
+          updateInfoBar(hoverT);
+          updateChartCursors(hoverT);
       });
 
       tlWrap?.addEventListener('mouseleave', () => {
@@ -1676,6 +1716,16 @@
 
       document.getElementById('device-search').addEventListener('input', (e) => {
         renderDeviceList(e.target.value);
+      });
+
+      document.getElementById("tzToggle").addEventListener("change", function (e) {
+        useLogTime = e.target.checked;
+
+        buildTagBar();
+        recomputeTime();
+        renderAll();
+        buildLegend();
+        buildTabs();
       });
 
       initTagModalEvents();

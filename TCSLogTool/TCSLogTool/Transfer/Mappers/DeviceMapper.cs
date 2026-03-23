@@ -25,7 +25,8 @@ public static class DeviceMapper
                 id = device,
                 type = deviceStates.First().DeviceType.ToString(),
                 batch = deviceStates.First().DeviceType.ToString(),
-                lastState = deviceStates.Last().State
+                lastState = deviceStates.Last().State,
+                offset = TimeHelper.GetOffsetMinutes(deviceStates.First().Start)
             };
 
             // SEGMENTS
