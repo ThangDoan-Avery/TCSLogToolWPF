@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Command Duration — Baseline Comparison</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #07090f;
+  --s1:      #0c0f18;
+  --s2:      #111520;
+  --s3:      #181d2a;
+  --border:  #1e2638;
+  --border2: #28334a;
+  --text:    #b8c8e0;
+  --muted:   #3a4d6a;
+  --muted2:  #5a7090;
+  --accent:  #4f8ef7;
+  --purple:  #7c5cfc;
+  --green:   #1fdb8a;
+  --yellow:  #f5c842;
+  --red:     #f05050;
+  --orange:  #f5832a;
+  --gold:    #fbbf24;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  min-height: 100vh;
+  padding: 16px 20px;
+  user-select: none;
+}
+
+/* ── Header ── */
+header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
+h1 { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#fff; letter-spacing:-.3px; }
+.sub { font-size:10px; color:var(--muted2); margin-top:3px; }
+
+/* ── Layout ── */
+.top-layout { display:grid; grid-template-columns:1fr 300px; gap:12px; margin-bottom:12px; }
+.bot-layout { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ── Panel ── */
+.panel { background:var(--s1); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.ph {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; border-bottom:1px solid var(--border); font-size:11px;
+}
+.ph strong { color:var(--text); }
+.ph-right { display:flex; gap:8px; align-items:center; }
+.ph-badge {
+  padding:2px 8px; border-radius:10px; font-size:9px;
+  background:var(--s2); border:1px solid var(--border2); color:var(--muted2);
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  display:flex; gap:10px; flex-wrap:wrap;
+  padding:12px 14px; border-bottom:1px solid var(--border);
+  align-items:flex-end;
+}
+.fg { display:flex; flex-direction:column; gap:4px; }
+.fl { font-size:9px; color:var(--muted2); letter-spacing:.6px; text-transform:uppercase; }
+select, input[type=number] {
+  background:var(--s3); border:1px solid var(--border2); color:var(--text);
+  font-family:inherit; font-size:11px; padding:5px 8px; border-radius:4px;
+  outline:none; transition:border-color .15s;
+}
+select:focus, input:focus { border-color:var(--accent); }
+.btn {
+  padding:5px 12px; border-radius:4px; cursor:pointer;
+  font-family:inherit; font-size:11px; border:1px solid var(--border2);
+  background:transparent; color:var(--muted2); transition:all .15s;
+}
+.btn:hover { border-color:var(--accent); color:var(--accent); }
+.btn.primary { border-color:var(--gold); color:var(--gold); background:rgba(251,191,36,.08); }
+.btn.primary:hover { background:rgba(251,191,36,.18); }
+.btn.danger { border-color:var(--red); color:var(--red); }
+
+/* ── Stats row ── */
+.stats-row { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; padding:10px 14px; border-bottom:1px solid var(--border); }
+.sc { display:flex; flex-direction:column; }
+.sl { font-size:9px; color:var(--muted2); margin-bottom:3px; }
+.sv { font-size:16px; font-weight:700; font-family:'Syne',sans-serif; line-height:1; }
+.ss { font-size:9px; color:var(--muted); margin-top:2px; }
+
+/* ── Chart canvas ── */
+.chart-wrap { padding:12px 14px 10px; }
+canvas { display:block; }
+
+/* ── Baseline Panel ── */
+.baseline-empty {
+  padding:24px 16px; text-align:center; color:var(--muted);
+  font-size:11px; line-height:1.7;
+}
+.baseline-list { padding:10px 12px; display:flex; flex-direction:column; gap:6px; max-height:380px; overflow-y:auto; }
+
+.bline {
+  background:var(--s2); border:1px solid var(--border); border-radius:6px;
+  padding:10px 12px; position:relative; cursor:default;
+  transition: border-color .15s;
+}
+.bline.active { border-color: var(--gold); }
+.bline-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.bline-icon { font-size:13px; }
+.bline-name { font-size:12px; font-weight:600; color:#fff; flex:1; }
+.bline-tag { font-size:9px; padding:1px 6px; border-radius:10px; }
+.tag-golden { background:rgba(251,191,36,.15); color:var(--gold); border:1px solid rgba(251,191,36,.3); }
+.tag-custom { background:rgba(79,142,247,.15); color:var(--accent); border:1px solid rgba(79,142,247,.3); }
+.tag-auto   { background:rgba(31,219,138,.15); color:var(--green); border:1px solid rgba(31,219,138,.3); }
+
+.bline-rows { display:grid; grid-template-columns:1fr 1fr; gap:3px 12px; }
+.bline-row { display:flex; justify-content:space-between; gap:8px; }
+.bline-lbl { font-size:10px; color:var(--muted2); }
+.bline-val { font-size:10px; font-weight:600; }
+
+.bline-actions { display:flex; gap:6px; margin-top:8px; }
+.bline-btn {
+  padding:2px 8px; font-size:9px; border-radius:3px; cursor:pointer;
+  font-family:inherit; border:1px solid var(--border2); background:transparent; color:var(--muted2);
+  transition:all .15s;
+}
+.bline-btn:hover { border-color:var(--accent); color:var(--accent); }
+.bline-btn.del:hover { border-color:var(--red); color:var(--red); }
+.bline-btn.apply { border-color:var(--gold); color:var(--gold); }
+.bline-btn.apply:hover { background:rgba(251,191,36,.1); }
+
+/* ── Deviation list ── */
+.dev-list { padding:10px 12px; display:flex; flex-direction:column; gap:4px; max-height:280px; overflow-y:auto; }
+.dev-item {
+  display:flex; align-items:center; gap:8px; padding:6px 10px;
+  border-radius:4px; background:var(--s2); border:1px solid var(--border);
+  cursor:pointer; transition:border-color .15s;
+}
+.dev-item:hover { border-color:var(--border2); }
+.dev-item.hov { border-color:var(--accent); }
+.di-run { font-size:9px; color:var(--muted); width:56px; }
+.di-bar { flex:1; height:6px; border-radius:3px; background:var(--border); overflow:hidden; position:relative; }
+.di-bar-base { position:absolute; top:0; left:0; height:100%; border-radius:3px; }
+.di-bar-run  { position:absolute; top:0; left:0; height:100%; border-radius:3px; opacity:.6; }
+.di-val { font-size:11px; font-weight:600; width:44px; text-align:right; }
+.di-dev { font-size:10px; width:52px; text-align:right; font-weight:600; }
+
+/* ── Save baseline modal ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200;
+  display:none; align-items:center; justify-content:center;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--s1); border:1px solid var(--border2); border-radius:10px;
+  padding:22px 24px; width:380px; box-shadow:0 20px 60px rgba(0,0,0,.8);
+}
+.modal h2 { font-family:'Syne',sans-serif; font-size:16px; color:#fff; margin-bottom:14px; }
+.modal-field { margin-bottom:12px; }
+.modal-field label { font-size:10px; color:var(--muted2); display:block; margin-bottom:4px; letter-spacing:.5px; text-transform:uppercase; }
+.modal-field input[type=text], .modal-field textarea, .modal-field select {
+  width:100%; background:var(--s3); border:1px solid var(--border2); color:var(--text);
+  font-family:inherit; font-size:11px; padding:7px 10px; border-radius:4px; outline:none;
+  resize:vertical;
+}
+.modal-field input[type=text]:focus, .modal-field textarea:focus { border-color:var(--accent); }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+
+/* ── Threshold bands ── */
+.threshold-legend {
+  display:flex; gap:12px; padding:6px 14px; border-top:1px solid var(--border);
+  font-size:10px; flex-wrap:wrap;
+}
+.tl-item { display:flex; align-items:center; gap:5px; color:var(--muted2); }
+.tl-swatch { width:24px; height:3px; border-radius:2px; }
+
+/* scrollbar */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+.tooltip {
+  position:fixed; background:#101520; border:1px solid var(--border2); border-radius:6px;
+  padding:9px 13px; font-size:11px; pointer-events:none; z-index:999; display:none;
+  min-width:170px; box-shadow:0 8px 32px rgba(0,0,0,.7);
+}
+.tooltip.show { display:block; }
+.tt-title { font-weight:700; color:#fff; margin-bottom:7px; }
+.tt-row { display:flex; justify-content:space-between; gap:12px; margin-bottom:3px; }
+.tt-l { color:var(--muted2); }
+.tt-v { font-weight:600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⬡ Command Duration — Baseline Comparison</h1>
+    <div class="sub">Define golden runs · Set tolerance bands · Detect anomalies automatically</div>
+  </div>
+</header>
+
+<!-- TOP: Run chart + Baseline panel -->
+<div class="top-layout">
+
+  <!-- Main panel -->
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="fg">
+        <div class="fl">Device Type</div>
+        <select id="sel-dtype" onchange="onFilter()" style="width:140px">
+          <option value="EFEM Robot">EFEM Robot</option>
+          <option value="Vacuum Chamber">Vacuum Chamber</option>
+          <option value="LoadPort">LoadPort</option>
+          <option value="Aligner">Aligner</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Device ID</div>
+        <select id="sel-dev" onchange="onFilter()" style="width:110px"></select>
+      </div>
+      <div class="fg">
+        <div class="fl">Command</div>
+        <select id="sel-cmd" onchange="onFilter()" style="width:120px"></select>
+      </div>
+      <div class="fg">
+        <div class="fl">Min dur (no-op filter)</div>
+        <input type="number" id="min-dur" value="0.5" step="0.1" min="0" style="width:80px" onchange="onFilter()">
+      </div>
+      <div style="display:flex;gap:6px;padding-bottom:1px">
+        <button class="btn primary" onclick="openSaveModal('stats')">⭐ Save as Baseline</button>
+        <button class="btn" onclick="openSaveModal('selected')">📌 Save selected runs</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="sc"><div class="sl">RUNS</div><div class="sv" id="st-n" style="color:#fff">—</div><div class="ss">included</div></div>
+      <div class="sc"><div class="sl">MEAN</div><div class="sv" id="st-mean" style="color:var(--accent)">—</div><div class="ss">avg</div></div>
+      <div class="sc"><div class="sl">MEDIAN</div><div class="sv" id="st-med" style="color:var(--purple)">—</div><div class="ss">P50</div></div>
+      <div class="sc"><div class="sl">P95</div><div class="sv" id="st-p95" style="color:var(--orange)">—</div><div class="ss">95th pct</div></div>
+      <div class="sc"><div class="sl">PEAK</div><div class="sv" id="st-max" style="color:var(--red)">—</div><div class="ss">max</div></div>
+      <div class="sc"><div class="sl">STDDEV</div><div class="sv" id="st-std" style="color:var(--yellow)">—</div><div class="ss">σ</div></div>
+      <div class="sc"><div class="sl">ANOMALIES</div><div class="sv" id="st-anom" style="color:var(--red)">—</div><div class="ss">vs baseline</div></div>
+    </div>
+
+    <div class="chart-wrap"><canvas id="run-canvas" height="280"></canvas></div>
+
+    <div class="threshold-legend">
+      <div class="tl-item"><div class="tl-swatch" style="background:var(--gold)"></div>Baseline target</div>
+      <div class="tl-item"><div class="tl-swatch" style="background:rgba(251,191,36,.3)"></div>Warning band (±σ)</div>
+      <div class="tl-item"><div class="tl-swatch" style="background:rgba(240,80,80,.2)"></div>Critical band (±2σ)</div>
+      <div class="tl-item"><div class="tl-swatch" style="background:var(--green)"></div>Normal run</div>
+      <div class="tl-item"><div class="tl-swatch" style="background:var(--yellow)"></div>Warning</div>
+      <div class="tl-item"><div class="tl-swatch" style="background:var(--red)"></div>Anomaly</div>
+    </div>
+  </div>
+
+  <!-- Baseline panel -->
+  <div class="panel">
+    <div class="ph">
+      <strong>⭐ Baselines</strong>
+      <span class="ph-badge" id="bl-count">0 saved</span>
+    </div>
+    <div id="baseline-container">
+      <div class="baseline-empty">
+        No baselines saved yet.<br><br>
+        Run a command, then click<br>
+        <strong style="color:var(--gold)">⭐ Save as Baseline</strong><br>
+        to capture the current stats as reference.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM: Distribution + Deviation list -->
+<div class="bot-layout">
+  <div class="panel">
+    <div class="ph">
+      <strong>Distribution</strong>
+      <span style="font-size:9px;color:var(--muted2)">histogram · baseline overlay</span>
+    </div>
+    <div class="chart-wrap"><canvas id="dist-canvas" height="150"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <strong>Run Deviation vs Baseline</strong>
+      <span id="dev-sub" style="font-size:9px;color:var(--muted2)">select a baseline to compare</span>
+    </div>
+    <div class="dev-list" id="dev-list">
+      <div style="padding:16px;color:var(--muted);font-size:11px;text-align:center">
+        Save a baseline first, then apply it to see per-run deviation.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>⭐ Save Baseline</h2>
+    <div class="modal-field">
+      <label>Baseline Name</label>
+      <input type="text" id="bl-name" placeholder="e.g. GetExtend nominal (clean room, lot A)">
+    </div>
+    <div class="modal-field">
+      <label>Type</label>
+      <select id="bl-type">
+        <option value="golden">Golden Run (hand-picked perfect runs)</option>
+        <option value="stats">Statistical (mean ± σ from current data)</option>
+        <option value="custom">Custom — enter target manually</option>
+      </select>
+    </div>
+    <div id="custom-fields" style="display:none">
+      <div class="modal-field">
+        <label>Target duration (s)</label>
+        <input type="number" id="bl-target" step="0.1" placeholder="e.g. 16.5">
+      </div>
+      <div class="modal-field">
+        <label>Warning threshold ± (s)</label>
+        <input type="number" id="bl-warn" step="0.1" placeholder="e.g. 2.0">
+      </div>
+      <div class="modal-field">
+        <label>Critical threshold ± (s)</label>
+        <input type="number" id="bl-crit" step="0.1" placeholder="e.g. 5.0">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Note</label>
+      <textarea id="bl-note" rows="2" placeholder="Conditions, lot number, environment..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveBaseline()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── RNG ───────────────────────────────────────────────────────────────────────
+function seededRng(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0xFFFFFFFF; };
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const CMD_COLOR = {
+  Init:'#7c5cfc', Home:'#3b9eff', GetExtend:'#1fdb8a', Retract:'#f5a623',
+  Open:'#38d9f5', Close:'#f0724a', Map:'#e879f9', Pump:'#a3e635',
+  Vent:'#fb923c', Align:'#facc15', Place:'#34d399',
+};
+
+const DEVICE_TYPES = {
+  'EFEM Robot':     { devices:['EFEM-01','EFEM-02','EFEM-03'], commands:['Init','Home','GetExtend','Retract','Place'] },
+  'Vacuum Chamber': { devices:['VAC-01','VAC-02'],             commands:['Init','Open','Close','Pump','Vent'] },
+  'LoadPort':       { devices:['LP-A1','LP-A2','LP-B1'],       commands:['Init','Open','Close','Map'] },
+  'Aligner':        { devices:['ALN-01'],                      commands:['Init','Align'] },
+};
+
+const CMD_PROFILE = {
+  Init:{base:4.5,sigma:.6},  Home:{base:7.8,sigma:1.2}, GetExtend:{base:16,sigma:2.5},
+  Retract:{base:9.5,sigma:1.5}, Place:{base:8.2,sigma:1.0},
+  Open:{base:7.2,sigma:.8},  Close:{base:6.8,sigma:.9}, Map:{base:10.5,sigma:1.8},
+  Pump:{base:45,sigma:8},    Vent:{base:9,sigma:2},      Align:{base:14,sigma:2.2},
+};
+
+function generateRuns(dtype, devId, cmd) {
+  const rng = seededRng((dtype+devId+cmd).split('').reduce((a,c)=>a+c.charCodeAt(0),0));
+  const p = CMD_PROFILE[cmd] || {base:10,sigma:2};
+  const N = 35 + Math.round(rng()*25);
+  return Array.from({length:N}, (_, i) => {
+    const u1=Math.max(.0001,rng()), u2=rng();
+    const z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+    let dur = Math.max(.05, p.base + z*p.sigma);
+    if (rng()<.05) dur *= 1.4 + rng()*.8; // occasional spike
+    return { id: dtype+devId+cmd+i, device_id:devId, device_type:dtype, command:cmd,
+             duration:parseFloat(dur.toFixed(3)), run_index:i };
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allRuns = [];
+let displayRuns = [];
+let baselines = []; // [{id, name, type, target, warn, crit, std, note, cmd, dtype, devId, createdAt}]
+let activeBaselineId = null;
+let hoverRunId = null;
+let saveMode = 'stats';
+
+// ── Selects ───────────────────────────────────────────────────────────────────
+function populateSelects() {
+  const dtype = document.getElementById('sel-dtype').value;
+  const info  = DEVICE_TYPES[dtype] || {devices:[],commands:[]};
+
+  const devEl = document.getElementById('sel-dev');
+  const prevDev = devEl.value;
+  devEl.innerHTML = info.devices.map(d=>`<option value="${d}">${d}</option>`).join('');
+  if (info.devices.includes(prevDev)) devEl.value = prevDev;
+
+  const cmdEl = document.getElementById('sel-cmd');
+  const prevCmd = cmdEl.value;
+  cmdEl.innerHTML = info.commands.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if (info.commands.includes(prevCmd)) cmdEl.value = prevCmd;
+}
+
+function onFilter() {
+  populateSelects();
+  const dtype  = document.getElementById('sel-dtype').value;
+  const devId  = document.getElementById('sel-dev').value;
+  const cmd    = document.getElementById('sel-cmd').value;
+  const minDur = parseFloat(document.getElementById('min-dur').value)||0;
+
+  allRuns = generateRuns(dtype, devId, cmd);
+  displayRuns = allRuns.filter(r=>r.duration >= minDur);
+
+  const activeBl = baselines.find(b=>b.id===activeBaselineId);
+  updateStats(activeBl);
+  drawRunChart(activeBl);
+  drawDistChart(activeBl);
+  buildDevList(activeBl);
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function computeStats(runs) {
+  if (!runs.length) return null;
+  const d = runs.map(r=>r.duration).sort((a,b)=>a-b);
+  const n = d.length;
+  const mean = d.reduce((a,b)=>a+b,0)/n;
+  const std  = Math.sqrt(d.reduce((a,b)=>a+(b-mean)**2,0)/n);
+  return { n, mean, std,
+    med:  n%2===0?(d[n/2-1]+d[n/2])/2:d[Math.floor(n/2)],
+    p95:  d[Math.floor(n*.95)],
+    max:  d[n-1], min:d[0],
+    p25:  d[Math.floor(n*.25)],
+    p75:  d[Math.floor(n*.75)],
+  };
+}
+
+function fmt(v) { return v===undefined||isNaN(v)?'—': v<10?v.toFixed(2)+'s':v.toFixed(1)+'s'; }
+
+function updateStats(bl) {
+  const stats = computeStats(displayRuns);
+  if (!stats) return;
+  document.getElementById('st-n').textContent    = stats.n;
+  document.getElementById('st-mean').textContent = fmt(stats.mean);
+  document.getElementById('st-med').textContent  = fmt(stats.med);
+  document.getElementById('st-p95').textContent  = fmt(stats.p95);
+  document.getElementById('st-max').textContent  = fmt(stats.max);
+  document.getElementById('st-std').textContent  = fmt(stats.std);
+
+  // anomalies vs baseline
+  if (bl) {
+    const anom = displayRuns.filter(r=> Math.abs(r.duration - bl.target) > bl.crit).length;
+    const anomEl = document.getElementById('st-anom');
+    anomEl.textContent = anom;
+    anomEl.style.color = anom > 0 ? 'var(--red)' : 'var(--green)';
+  } else {
+    document.getElementById('st-anom').textContent = '—';
+  }
+}
+
+// ── Run Chart ─────────────────────────────────────────────────────────────────
+function getRunStatus(run, bl) {
+  if (!bl) return 'normal';
+  const dev = Math.abs(run.duration - bl.target);
+  if (dev > bl.crit)  return 'critical';
+  if (dev > bl.warn)  return 'warning';
+  return 'normal';
+}
+
+const STATUS_COLOR = { normal:null, warning:'#f5c842', critical:'#f05050' };
+
+function drawRunChart(bl) {
+  const canvas = document.getElementById('run-canvas');
+  const dpr = window.devicePixelRatio||1;
+  const W   = canvas.parentElement.clientWidth - 28;
+  canvas.style.width=W+'px'; canvas.width=W*dpr; canvas.height=280*dpr; canvas.style.height='280px';
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,280);
+
+  if (!displayRuns.length) return;
+
+  const cmd   = document.getElementById('sel-cmd').value;
+  const color = CMD_COLOR[cmd]||'#4f8ef7';
+  const PAD_L=52,PAD_R=16,PAD_T=22,PAD_B=28;
+  const cW=W-PAD_L-PAD_R, cH=280-PAD_T-PAD_B;
+
+  const allDurs = displayRuns.map(r=>r.duration);
+  const maxDur  = Math.max(...allDurs, bl?bl.target+bl.crit*1.5:0) * 1.08;
+  const toY = v => PAD_T + cH - (v/maxDur)*cH;
+
+  // grid
+  ctx.strokeStyle='#1e2638'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const v=maxDur*i/5, y=toY(v);
+    ctx.beginPath(); ctx.moveTo(PAD_L,y); ctx.lineTo(PAD_L+cW,y); ctx.stroke();
+    ctx.fillStyle='#3a4d6a'; ctx.font='9px JetBrains Mono'; ctx.textAlign='right';
+    ctx.fillText(fmt(v),PAD_L-4,y+3);
+  }
+
+  // ── Baseline bands ──
+  if (bl) {
+    // critical band
+    const yCritHi=toY(bl.target+bl.crit), yCritLo=toY(Math.max(0,bl.target-bl.crit));
+    ctx.fillStyle='rgba(240,80,80,.1)';
+    ctx.fillRect(PAD_L,0,cW,yCritHi); // above crit
+    ctx.fillRect(PAD_L,yCritLo,cW,PAD_T+cH-yCritLo); // below crit
+
+    // warning band
+    const yWarnHi=toY(bl.target+bl.warn), yWarnLo=toY(Math.max(0,bl.target-bl.warn));
+    ctx.fillStyle='rgba(245,200,66,.08)';
+    ctx.fillRect(PAD_L,yCritHi,cW,yWarnHi-yCritHi);
+    ctx.fillRect(PAD_L,yWarnLo,cW,yCritLo-yWarnLo);
+
+    // OK band (green tint)
+    ctx.fillStyle='rgba(31,219,138,.05)';
+    ctx.fillRect(PAD_L,yWarnHi,cW,yWarnLo-yWarnHi);
+
+    // band labels (right side)
+    ctx.font='8px JetBrains Mono'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(240,80,80,.6)';    ctx.fillText('CRITICAL ±'+bl.crit.toFixed(1)+'s', PAD_L+cW-80, yCritHi+9);
+    ctx.fillStyle='rgba(245,200,66,.6)';   ctx.fillText('WARNING ±'+bl.warn.toFixed(1)+'s',  PAD_L+cW-80, yWarnHi+9);
+    ctx.fillStyle='rgba(251,191,36,.7)';
+
+    // Target line
+    ctx.strokeStyle='rgba(251,191,36,.9)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    const yTgt=toY(bl.target);
+    ctx.beginPath(); ctx.moveTo(PAD_L,yTgt); ctx.lineTo(PAD_L+cW,yTgt); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='9px JetBrains Mono'; ctx.textAlign='left';
+    ctx.fillText('⭐ '+bl.name+' ('+fmt(bl.target)+')', PAD_L+4, yTgt-4);
+  }
+
+  // dots + bars
+  const dotW = cW / displayRuns.length;
+  canvas._dots = [];
+
+  displayRuns.forEach((run, i) => {
+    const x  = PAD_L + (i+.5)*dotW;
+    const y  = toY(run.duration);
+    const st = getRunStatus(run, bl);
+    const dc = STATUS_COLOR[st] || color;
+    const isHov = hoverRunId === run.id;
+
+    // bar
+    ctx.fillStyle = (dc||color) + (st==='normal'?'22':'44');
+    ctx.fillRect(x-1.5, y, 3, PAD_T+cH-y);
+
+    // dot
+    const r = isHov ? 6 : 3.5;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = isHov ? '#fff' : (dc||color);
+    ctx.shadowColor = dc||color; ctx.shadowBlur = isHov?10:3;
+    ctx.fill(); ctx.shadowBlur=0;
+
+    canvas._dots.push({x,y,run,status:st});
+  });
+
+  // x-axis
+  ctx.strokeStyle='#1e2638'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD_L,PAD_T+cH); ctx.lineTo(PAD_L+cW,PAD_T+cH); ctx.stroke();
+  ctx.fillStyle='#3a4d6a'; ctx.font='9px JetBrains Mono'; ctx.textAlign='left';
+  ctx.fillText('run index →', PAD_L, PAD_T+cH+16);
+}
+
+// ── Distribution Chart ────────────────────────────────────────────────────────
+function drawDistChart(bl) {
+  const canvas = document.getElementById('dist-canvas');
+  const dpr = window.devicePixelRatio||1;
+  const W   = canvas.parentElement.clientWidth-28;
+  canvas.style.width=W+'px'; canvas.width=W*dpr; canvas.height=150*dpr; canvas.style.height='150px';
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,150);
+
+  if (!displayRuns.length) return;
+  const cmd   = document.getElementById('sel-cmd').value;
+  const color = CMD_COLOR[cmd]||'#4f8ef7';
+  const PAD_L=52,PAD_R=16,PAD_T=10,PAD_B=28;
+  const cW=W-PAD_L-PAD_R, cH=150-PAD_T-PAD_B;
+
+  const durs = displayRuns.map(r=>r.duration);
+  const minV = Math.min(...durs)*.9, maxV = Math.max(...durs)*1.05;
+  const range = maxV-minV||1;
+  const toX = v => PAD_L+((v-minV)/range)*cW;
+
+  const BINS=Math.min(40,Math.max(10,Math.round(Math.sqrt(durs.length)*2)));
+  const buckets=Array(BINS).fill(0);
+  durs.forEach(d=>{ const bi=Math.min(BINS-1,Math.floor((d-minV)/range*BINS)); buckets[bi]++; });
+  const maxC=Math.max(...buckets);
+
+  // baseline bands on dist
+  if (bl) {
+    const fillBand=(lo,hi,c)=>{
+      ctx.fillStyle=c;
+      ctx.fillRect(Math.max(PAD_L,toX(lo)),PAD_T,Math.min(PAD_L+cW,toX(hi))-Math.max(PAD_L,toX(lo)),cH);
+    };
+    fillBand(bl.target-bl.crit, bl.target+bl.crit, 'rgba(240,80,80,.1)');
+    fillBand(bl.target-bl.warn, bl.target+bl.warn, 'rgba(245,200,66,.1)');
+    fillBand(bl.target-bl.warn, bl.target+bl.warn, 'rgba(31,219,138,.07)');
+  }
+
+  // bars
+  const stats = computeStats(displayRuns);
+  for(let i=0;i<BINS;i++){
+    if(!buckets[i]) continue;
+    const bMinV = minV + i*(range/BINS);
+    const bMidV = bMinV + range/BINS/2;
+    const x=PAD_L+i*(cW/BINS), bw=cW/BINS-.5;
+    const h=(buckets[i]/maxC)*cH;
+    const st = bl ? getRunStatus({duration:bMidV},bl) : 'normal';
+    const c  = STATUS_COLOR[st]||color;
+    ctx.fillStyle=(c||color)+'99';
+    ctx.fillRect(x,PAD_T+cH-h,bw,h);
+  }
+
+  // P25-P75 bracket
+  if (stats) {
+    const xp25=toX(stats.p25), xp75=toX(stats.p75);
+    ctx.strokeStyle='rgba(124,92,252,.5)'; ctx.lineWidth=1; ctx.setLineDash([]);
+    ctx.strokeRect(xp25,PAD_T+2,xp75-xp25,cH-2);
+  }
+
+  // baseline target line
+  if (bl) {
+    const xt=toX(bl.target);
+    ctx.strokeStyle='rgba(251,191,36,.9)'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(xt,PAD_T); ctx.lineTo(xt,PAD_T+cH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // mean line
+  if (stats) {
+    const xm=toX(stats.mean);
+    ctx.strokeStyle='rgba(79,142,247,.7)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(xm,PAD_T); ctx.lineTo(xm,PAD_T+cH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // hover marker
+  if (hoverRunId) {
+    const hr = displayRuns.find(r=>r.id===hoverRunId);
+    if (hr) {
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+      const xh=toX(hr.duration);
+      ctx.beginPath(); ctx.moveTo(xh,PAD_T); ctx.lineTo(xh,PAD_T+cH); ctx.stroke();
+    }
+  }
+
+  // x labels
+  ctx.fillStyle='#3a4d6a'; ctx.font='9px JetBrains Mono'; ctx.textAlign='center';
+  for(let i=0;i<=4;i++) ctx.fillText(fmt(minV+(range*i/4)), PAD_L+(i/4)*cW, PAD_T+cH+16);
+
+  // legend
+  if (stats) {
+    const blStr = bl ? `  ⭐ target=${fmt(bl.target)}` : '';
+    ctx.textAlign='left'; ctx.fillStyle='#3a4d6a';
+    ctx.fillText(`μ=${fmt(stats.mean)}  σ=${fmt(stats.std)}  P25=${fmt(stats.p25)}  P75=${fmt(stats.p75)}${blStr}`, PAD_L, PAD_T+cH+26);
+  }
+}
+
+// ── Deviation list ────────────────────────────────────────────────────────────
+function buildDevList(bl) {
+  const list = document.getElementById('dev-list');
+  const sub  = document.getElementById('dev-sub');
+  if (!bl) {
+    list.innerHTML='<div style="padding:16px;color:var(--muted);font-size:11px;text-align:center">Apply a baseline to see per-run deviation.</div>';
+    sub.textContent='select a baseline to compare';
+    return;
+  }
+
+  sub.textContent = `vs: ${bl.name} (${fmt(bl.target)})`;
+  const sorted = [...displayRuns].sort((a,b)=>Math.abs(b.duration-bl.target)-Math.abs(a.duration-bl.target));
+  const maxDev = Math.max(...sorted.map(r=>Math.abs(r.duration-bl.target)));
+  const cmd = document.getElementById('sel-cmd').value;
+  const color = CMD_COLOR[cmd]||'#4f8ef7';
+
+  list.innerHTML='';
+  sorted.forEach(run => {
+    const dev  = run.duration - bl.target;
+    const aDev = Math.abs(dev);
+    const st   = getRunStatus(run, bl);
+    const sc   = STATUS_COLOR[st]||color;
+    const pct  = (aDev/Math.max(maxDev,0.01))*100;
+    const basePct = (bl.target / Math.max(run.duration, bl.target))*100;
+
+    const div = document.createElement('div');
+    div.className = 'dev-item' + (hoverRunId===run.id?' hov':'');
+    div.innerHTML = `
+      <span class="di-run">#${run.run_index+1} <span style="color:${sc||color};font-size:9px">${st==='normal'?'✓':st==='warning'?'⚠':'✖'}</span></span>
+      <div class="di-bar">
+        <div class="di-bar-base" style="width:${basePct}%;background:rgba(251,191,36,.4)"></div>
+        <div class="di-bar-run"  style="width:${Math.min(100,(run.duration/Math.max(...displayRuns.map(r=>r.duration)))*100)}%;background:${sc||color}"></div>
+      </div>
+      <span class="di-val" style="color:${sc||color}">${run.duration.toFixed(2)}s</span>
+      <span class="di-dev" style="color:${dev>0?'var(--red)':'var(--green)'}">${dev>0?'+':''}${dev.toFixed(2)}s</span>
+    `;
+    div.addEventListener('mouseenter',()=>{ hoverRunId=run.id; redrawAll(); });
+    div.addEventListener('mouseleave',()=>{ hoverRunId=null;   redrawAll(); });
+    list.appendChild(div);
+  });
+}
+
+// ── Baseline management ───────────────────────────────────────────────────────
+function openSaveModal(mode) {
+  saveMode = mode;
+  const stats = computeStats(displayRuns);
+  if (!stats) return;
+  const cmd = document.getElementById('sel-cmd').value;
+  const dev = document.getElementById('sel-dev').value;
+  document.getElementById('bl-name').value = `${cmd} — ${dev} nominal`;
+  document.getElementById('bl-target').value = stats.mean.toFixed(2);
+  document.getElementById('bl-warn').value   = (stats.std).toFixed(2);
+  document.getElementById('bl-crit').value   = (stats.std*2).toFixed(2);
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('bl-type').onchange = function() {
+    document.getElementById('custom-fields').style.display = this.value==='custom'?'block':'none';
+  };
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+function saveBaseline() {
+  const name  = document.getElementById('bl-name').value.trim() || 'Baseline';
+  const type  = document.getElementById('bl-type').value;
+  const note  = document.getElementById('bl-note').value.trim();
+  const stats = computeStats(displayRuns);
+  const cmd   = document.getElementById('sel-cmd').value;
+  const dtype = document.getElementById('sel-dtype').value;
+  const devId = document.getElementById('sel-dev').value;
+
+  let target, warn, crit;
+  if (type === 'custom') {
+    target = parseFloat(document.getElementById('bl-target').value)||stats.mean;
+    warn   = parseFloat(document.getElementById('bl-warn').value)||stats.std;
+    crit   = parseFloat(document.getElementById('bl-crit').value)||stats.std*2;
+  } else {
+    target = stats.mean;
+    warn   = stats.std;
+    crit   = stats.std * 2;
+  }
+
+  const bl = { id: Date.now()+'', name, type, target, warn, crit, std:stats.std,
+    note, cmd, dtype, devId,
+    n: stats.n, mean:stats.mean, med:stats.med, p95:stats.p95,
+    createdAt: new Date().toLocaleString() };
+  baselines.push(bl);
+  activeBaselineId = bl.id;
+  closeModal();
+  renderBaselines();
+  redrawAll();
+}
+
+function applyBaseline(id) {
+  activeBaselineId = id === activeBaselineId ? null : id;
+  renderBaselines();
+  redrawAll();
+}
+
+function deleteBaseline(id) {
+  baselines = baselines.filter(b=>b.id!==id);
+  if (activeBaselineId===id) activeBaselineId=null;
+  renderBaselines();
+  redrawAll();
+}
+
+function renderBaselines() {
+  const con = document.getElementById('baseline-container');
+  document.getElementById('bl-count').textContent = baselines.length + ' saved';
+
+  if (!baselines.length) {
+    con.innerHTML = `<div class="baseline-empty">No baselines saved yet.<br><br>Run a command, then click<br><strong style="color:var(--gold)">⭐ Save as Baseline</strong><br>to capture the current stats as reference.</div>`;
+    return;
+  }
+
+  con.innerHTML = '<div class="baseline-list">' +
+    baselines.map(bl => {
+      console.log('bl: ', bl);
+      const isActive = bl.id === activeBaselineId;
+      const tagClass = bl.type==='golden'?'tag-golden': bl.type==='custom'?'tag-custom':'tag-auto';
+      const tagLabel = bl.type==='golden'?'Golden':bl.type==='custom'?'Custom':'Statistical';
+      return `
+        <div class="bline ${isActive?'active':''}">
+          <div class="bline-head">
+            <span class="bline-icon">⭐</span>
+            <span class="bline-name">${bl.name}</span>
+            <span class="bline-tag ${tagClass}">${tagLabel}</span>
+          </div>
+          <div class="bline-rows">
+            <div class="bline-row"><span class="bline-lbl">Command</span><span class="bline-val" style="color:${CMD_COLOR[bl.cmd]||'#fff'}">${bl.cmd}</span></div>
+            <div class="bline-row"><span class="bline-lbl">Device</span><span class="bline-val">${bl.devId}</span></div>
+            <div class="bline-row"><span class="bline-lbl">Target</span><span class="bline-val" style="color:var(--gold)">${bl.target.toFixed(2)}s</span></div>
+            <div class="bline-row"><span class="bline-lbl">σ</span><span class="bline-val">${bl.std.toFixed(2)}s</span></div>
+            <div class="bline-row"><span class="bline-lbl">⚠ Warning ±</span><span class="bline-val" style="color:var(--yellow)">${bl.warn.toFixed(2)}s</span></div>
+            <div class="bline-row"><span class="bline-lbl">✖ Critical ±</span><span class="bline-val" style="color:var(--red)">${bl.crit.toFixed(2)}s</span></div>
+            ${bl.note?`<div class="bline-row" style="grid-column:1/-1"><span class="bline-lbl">Note</span><span class="bline-val" style="font-size:10px;color:var(--muted2)">${bl.note}</span></div>`:''}
+            <div class="bline-row" style="grid-column:1/-1"><span class="bline-lbl">Saved</span><span class="bline-val" style="font-size:9px;color:var(--muted)">${bl.createdAt}</span></div>
+          </div>
+          <div class="bline-actions">
+            <button class="bline-btn apply" onclick="applyBaseline('${bl.id}')">${isActive?'✓ Applied':'Apply'}</button>
+            <button class="bline-btn del" onclick="deleteBaseline('${bl.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('') + '</div>';
+}
+
+// ── Canvas hover ──────────────────────────────────────────────────────────────
+document.getElementById('run-canvas').addEventListener('mousemove', function(e) {
+  if (!this._dots) return;
+  const rect=this.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let cl=null, md=14;
+  this._dots.forEach(d=>{ const dist=Math.hypot(d.x-mx,d.y-my); if(dist<md){md=dist;cl=d;} });
+  if (cl) {
+    hoverRunId=cl.run.id;
+    showRunTooltip(e,cl.run,cl.status);
+  } else {
+    if(hoverRunId){hoverRunId=null;hideTooltip();}
+  }
+  redrawAll();
+});
+document.getElementById('run-canvas').addEventListener('mouseleave',()=>{hoverRunId=null;hideTooltip();redrawAll();});
+
+function showRunTooltip(e,run,status) {
+  const tt=document.getElementById('tooltip');
+  const cmd=document.getElementById('sel-cmd').value;
+  const color=CMD_COLOR[cmd]||'#4f8ef7';
+  const bl=baselines.find(b=>b.id===activeBaselineId);
+  const dev=bl?(run.duration-bl.target):null;
+  const sc=STATUS_COLOR[status]||color;
+  tt.innerHTML=`
+    <div class="tt-title" style="color:${color}">${run.command} · ${run.device_id}</div>
+    <div class="tt-row"><span class="tt-l">Duration</span><span class="tt-v" style="color:${sc||color}">${run.duration.toFixed(3)}s</span></div>
+    <div class="tt-row"><span class="tt-l">Run #</span><span class="tt-v">${run.run_index+1}</span></div>
+    ${bl?`<div class="tt-row"><span class="tt-l">vs baseline</span><span class="tt-v" style="color:${dev>0?'var(--red)':'var(--green)'}">${dev>0?'+':''}${dev.toFixed(3)}s</span></div>`:''}
+    ${status!=='normal'?`<div style="color:${sc};margin-top:5px;font-size:10px">${status==='warning'?'⚠ WARNING':'✖ CRITICAL'} — outside tolerance</div>`:''}
+  `;
+  tt.classList.add('show');
+  tt.style.left=Math.min(e.clientX+14,window.innerWidth-180)+'px';
+  tt.style.top=Math.max(10,e.clientY-10)+'px';
+}
+function hideTooltip(){document.getElementById('tooltip').classList.remove('show');}
+
+function redrawAll() {
+  const bl=baselines.find(b=>b.id===activeBaselineId);
+  drawRunChart(bl);
+  drawDistChart(bl);
+  buildDevList(bl);
+  updateStats(bl);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+populateSelects();
+onFilter();
+
+// Auto-create a demo baseline
+setTimeout(()=>{
+  const stats=computeStats(displayRuns);
+  if (!stats) return;
+  baselines.push({
+    id:'demo', name:'GetExtend — EFEM-01 nominal', type:'stats',
+    target:stats.mean, warn:stats.std, crit:stats.std*2, std:stats.std,
+    note:'Auto-generated demo baseline', cmd:'GetExtend', dtype:'EFEM Robot', devId:'EFEM-01',
+    n:stats.n, mean:stats.mean, med:stats.med, p95:stats.p95,
+    createdAt:new Date().toLocaleString()
+  });
+  activeBaselineId='demo';
+  renderBaselines();
+  redrawAll();
+}, 50);
+
+window.addEventListener('resize',()=>redrawAll());
+</script>
+</body>
+</html>
