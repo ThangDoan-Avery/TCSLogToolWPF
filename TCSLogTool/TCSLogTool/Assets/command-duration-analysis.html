@@ -741,6 +741,48 @@
       background: var(--bord2);
       border-radius: 2px;
     }
+
+    /* Import btn */
+    .import-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .import-btn-label {
+      background: #243050;
+      color: #1fdb8a;
+      border: 1px solid #1fdb8a;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .import-btn-label:hover {
+      background: #1fdb8a;
+      color: #121212;
+    }
+
+    .file-name-text {
+      color: #94a3b8;
+      font-size: 12px;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px dashed #475569;
+      padding-bottom: 2px;
+    }
+
+    .file-name-text.active {
+      color: #f5a623;
+      border-bottom: 1px solid #f5a623;
+    }
   </style>
 </head>
 
@@ -750,6 +792,15 @@
     <div>
       <h1>⬡ Command Duration Analysis</h1>
       <div class="sub">Per-command golden baseline · Warn / Critical bands · Save from data or manual</div>
+    </div>
+
+    <div class="import-wrapper">
+      <label for="fileInput" class="import-btn-label">
+        <span>IMPORT FILE</span>
+      </label>
+      <span id="fileName" class="file-name-text">No file selected</span>
+      <input type="file" id="fileInput" style="display:none" accept=".json" />
+    </div>
     </div>
   </header>
 
@@ -956,8 +1007,6 @@
     // ── DEVICE / COMMAND DATA ─────────────────────────────────────────────────────
     const RAW_DATA = { devices: [] };
 
-    const DEVICE_TYPES = buildDeviceTypes();
-
     const GOLDEN_KEY = 'COMMAND_DURATION_GOLDEN';
 
     const CMD_COLOR = {
@@ -1012,6 +1061,13 @@
 
       closeModal();
       redrawAll();
+    }
+
+    function loadData(devices) {
+      RAW_DATA.devices = devices || [];
+
+      initSels();
+      onFilter();
     }
 
     // ── LOAD RUNS ─────────────────────────────────────────────────────────────
@@ -1570,7 +1626,13 @@
     // listen to manual changes
     ['m-target', 'm-warn', 'm-crit'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => { if (saveMethod === 'manual') updateModalPreview(); });
+      if (el) {
+        el.addEventListener('input', () => {
+          if (saveMethod === 'manual') {
+            updateModalPreview();
+          }
+        });
+      }
     });
 
     // ── REDRAW ────────────────────────────────────────────────────────────────────
@@ -1588,6 +1650,35 @@
     onFilter();
 
     window.addEventListener('resize', () => { drawRunChart(); drawDistChart(); });
+
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileName').classList.add('active');
+
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+
+          if (Array.isArray(data)) {
+            loadData(data);
+          } else if (data.devices) {
+            loadData(data.devices);
+          } else {
+            alert('Invalid JSON format');
+          }
+
+        } catch (err) {
+          alert('JSON parse error');
+          console.error(err);
+        }
+      };
+
+      reader.readAsText(file);
+    });
 
     function setDevicesFromWpf(data) {
       console.log("DATA FROM WPF:", data);
