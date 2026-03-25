@@ -1012,6 +1012,8 @@
 
     const DEVICE_TYPES = buildDeviceTypes();
 
+    const GOLDEN_KEY = 'COMMAND_DURATION_GOLDEN';
+
     const CMD_COLOR = {
       Init: '#7c5cfc', Home: '#3b9eff', GetExtend: '#1fdb8a', GetRetract: '#f5a623', Stop: "#9f2626",
       Open: '#38d9f5', Close: '#f0724a', MoveToPos: '#e879f9', Batch: '#a3e635', TurnOff: '#fb923c',
@@ -1030,7 +1032,41 @@
 
     // ── GOLDEN BASELINES — keyed by "dtype::devId::cmd" ──────────────────────────
     // { target, warn, crit, source, note, createdAt }
-    let GOLDENS = {};
+    let GOLDENS = loadGoldens();
+
+    function loadGoldens() {
+      try {
+        return JSON.parse(localStorage.getItem(GOLDEN_KEY)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveGoldens() {
+      localStorage.setItem(GOLDEN_KEY, JSON.stringify(GOLDENS));
+    }
+
+    function saveGolden() {
+      const k = gKey();
+
+      const t = parseFloat(document.getElementById('m-target').value);
+      const w = parseFloat(document.getElementById('m-warn').value);
+      const c = parseFloat(document.getElementById('m-crit').value);
+
+      GOLDENS[k] = {
+        target: isNaN(t) ? 0 : t,
+        warn: isNaN(w) ? 0 : w,
+        crit: isNaN(c) ? 0 : c,
+        source: saveMethod,
+        note: document.getElementById('m-note').value || '',
+        createdAt: new Date().toLocaleString()
+      };
+
+      saveGoldens();
+
+      closeModal();
+      redrawAll();
+    }
 
     // ── LOAD RUNS ─────────────────────────────────────────────────────────────
     function loadRuns(dtype, devId, cmd) {
@@ -1051,7 +1087,8 @@
             command: c.name,
             duration: c.duration,
             run_index: idx,
-            excluded: false
+            excluded: false,
+            is_noop: false
           });
         });
       });
@@ -1264,16 +1301,33 @@
     }
 
     function inlineEditGolden() {
-      const k = gKey(); if (!GOLDENS[k]) return;
-      GOLDENS[k].target = parseFloat(document.getElementById('ge-t')?.value) || GOLDENS[k].target;
-      GOLDENS[k].warn = parseFloat(document.getElementById('ge-w')?.value) || GOLDENS[k].warn;
-      GOLDENS[k].crit = parseFloat(document.getElementById('ge-c')?.value) || GOLDENS[k].crit;
+      const k = gKey();
+      if (!GOLDENS[k]) return;
+
+      const tVal = document.getElementById('ge-t')?.value;
+      const wVal = document.getElementById('ge-w')?.value;
+      const cVal = document.getElementById('ge-c')?.value;
+
+      const t = parseFloat(tVal);
+      const w = parseFloat(wVal);
+      const c = parseFloat(cVal);
+
+      if (!isNaN(t)) GOLDENS[k].target = t;
+      if (!isNaN(w)) GOLDENS[k].warn = w;
+      if (!isNaN(c)) GOLDENS[k].crit = c;
+
+      // update metadata
       GOLDENS[k].source = 'manual';
+      GOLDENS[k].updatedAt = new Date().toLocaleString();
+
+      saveGoldens();
+
       redrawAll();
     }
 
-    function clearGolden() {
-      delete GOLDENS[gKey()];
+    function clearAllGoldens() {
+      localStorage.removeItem(GOLDEN_KEY);
+      GOLDENS = {};
       redrawAll();
     }
 
@@ -1447,7 +1501,7 @@
       const el = document.getElementById('run-list');
       const g = getGolden();
       const st = stats(displayRuns);
-      const maxDur = Math.max(...displayRuns.map(r => r.duration), .01);
+      const maxDur = Math.max(...displayRuns.map(r => r.duration), g ? g.target + g.crit : 0, 0.01);
       const exclN = displayRuns.filter(r => r.excluded).length;
       document.getElementById('excl-badge').textContent = exclN + ' excluded';
 
@@ -1521,7 +1575,12 @@
       document.getElementById('sel-cmd').value = cm;
       onFilter();
     }
-    function deleteGolden(k) { delete GOLDENS[k]; redrawAll(); }
+
+    function deleteGolden(k) {
+      delete GOLDENS[k];
+      saveGoldens();
+      redrawAll();
+    }
 
     // ── SAVE MODAL ────────────────────────────────────────────────────────────────
     function openSaveModal() {
@@ -1568,21 +1627,6 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => { if (saveMethod === 'manual') updateModalPreview(); });
     });
-
-    function saveGolden() {
-      const k = gKey();
-      const target = parseFloat(document.getElementById('m-target').value);
-      const warn = parseFloat(document.getElementById('m-warn').value);
-      const crit = parseFloat(document.getElementById('m-crit').value);
-      if (isNaN(target) || isNaN(warn) || isNaN(crit)) return;
-      GOLDENS[k] = {
-        target, warn, crit, source: saveMethod,
-        note: document.getElementById('m-note').value.trim(),
-        createdAt: new Date().toLocaleString()
-      };
-      closeModal();
-      redrawAll();
-    }
 
     // ── REDRAW ────────────────────────────────────────────────────────────────────
     function redrawAll() {
