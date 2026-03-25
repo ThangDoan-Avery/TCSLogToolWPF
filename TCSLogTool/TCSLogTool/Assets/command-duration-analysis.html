@@ -986,9 +986,9 @@
         </div>
       </div>
       <div class="mf mf-row">
-        <div><label>Target (s)</label><input type="number" id="m-target" step="0.1" placeholder="auto"></div>
-        <div><label>Warning ± (s)</label><input type="number" id="m-warn" step="0.1" placeholder="auto (1σ)"></div>
-        <div><label>Critical ± (s)</label><input type="number" id="m-crit" step="0.1" placeholder="auto (2σ)"></div>
+        <div><label>Target (ms)</label><input type="number" id="m-target" step="0.1" placeholder="auto"></div>
+        <div><label>Warning ± (ms)</label><input type="number" id="m-warn" step="0.1" placeholder="auto (1σ)"></div>
+        <div><label>Critical ± (ms)</label><input type="number" id="m-crit" step="0.1" placeholder="auto (2σ)"></div>
       </div>
       <div style="padding:6px 10px;background:var(--s2);border-radius:5px;margin-bottom:10px;" id="m-preview"></div>
       <div class="mf"><label>Note</label>
@@ -1126,7 +1126,7 @@
     // ── STATE ─────────────────────────────────────────────────────────────────────
     let allRuns = [], displayRuns = [], hoverRunId = null, saveMethod = 'mean';
 
-    const fmt = v => v == null || isNaN(v) ? '—' : v < 10 ? v.toFixed(2) + 's' : v.toFixed(1) + 's';
+    const fmt = v => v == null || isNaN(v) ? '—' : v < 10 ? v.toFixed(1) + 'ms' : v.toFixed(1) + 'ms';
     const gKey = () => {
       const dt = document.getElementById('sel-dtype')?.value || '';
       const dv = document.getElementById('sel-dev')?.value || 'all';
@@ -1294,9 +1294,9 @@
         <div class="gc-band-sub">${fmt(g.target - g.crit)} – ${fmt(g.target + g.crit)}</div></div>
     </div>
     <div class="gc-edit">
-      <div class="gef"><label>Target (s)</label><input type="number" id="ge-t" value="${g.target}" step="0.1" onchange="inlineEditGolden()"></div>
-      <div class="gef"><label>Warn ± (s)</label><input type="number" id="ge-w" value="${g.warn}"   step="0.1" onchange="inlineEditGolden()"></div>
-      <div class="gef"><label>Crit ± (s)</label><input type="number" id="ge-c" value="${g.crit}"   step="0.1" onchange="inlineEditGolden()"></div>
+      <div class="gef"><label>Target (ms)</label><input type="number" id="ge-t" value="${g.target}" step="0.1" onchange="inlineEditGolden()"></div>
+      <div class="gef"><label>Warn ± (ms)</label><input type="number" id="ge-w" value="${g.warn}"   step="0.1" onchange="inlineEditGolden()"></div>
+      <div class="gef"><label>Crit ± (ms)</label><input type="number" id="ge-c" value="${g.crit}"   step="0.1" onchange="inlineEditGolden()"></div>
       ${g.note ? `<div style="font-size:9px;color:var(--muted2);align-self:flex-end;padding-bottom:2px;font-style:italic">${g.note}</div>` : ''}
     </div>`;
     }
@@ -1448,8 +1448,8 @@
       const sc = STATUS_COLOR[st] || c;
       tt.innerHTML = `<div class="tt-title" style="color:${c}">${run.command}</div>
     <div class="tt-row"><span class="tt-l">Device</span><span class="tt-v">${run.device_id}</span></div>
-    <div class="tt-row"><span class="tt-l">Duration</span><span class="tt-v" style="color:${sc || c}">${run.duration.toFixed(3)}s</span></div>
-    ${dev != null ? `<div class="tt-row"><span class="tt-l">vs golden</span><span class="tt-v" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(3)}s</span></div>` : ''}
+    <div class="tt-row"><span class="tt-l">Duration</span><span class="tt-v" style="color:${sc || c}">${run.duration.toFixed(1)}ms</span></div>
+    ${dev != null ? `<div class="tt-row"><span class="tt-l">vs golden</span><span class="tt-v" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(1)}ms</span></div>` : ''}
     ${st !== 'ok' ? `<div style="color:${sc};font-size:10px;margin-top:4px">${st === 'warn' ? '⚠ WARNING' : '✖ CRITICAL'} — outside golden band</div>` : ''}
     ${run.is_noop ? '<div style="color:var(--orange);font-size:10px;margin-top:4px">⚡ No-op (already in position)</div>' : ''}
     <div style="font-size:9px;color:var(--muted);margin-top:4px">Click to ${run.excluded ? 'restore' : 'exclude'}</div>`;
@@ -1523,8 +1523,8 @@
         <div class="ri-bar-fill" style="width:${run.duration / maxDur * 100}%;background:${sc || CMD_COLOR[run.command] || '#3d8ef5'}88"></div>
         ${g ? `<div class="ri-bar-golden" style="left:${blPct}%"></div>` : ''}
       </div>
-      <span class="ri-val" style="color:${sc || CMD_COLOR[run.command] || '#3d8ef5'}">${run.duration.toFixed(2)}s</span>
-      ${dev != null && !isE ? `<span class="ri-dev" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(2)}s</span>` : '<span class="ri-dev" style="color:var(--muted)">—</span>'}
+      <span class="ri-val" style="color:${sc || CMD_COLOR[run.command] || '#3d8ef5'}">${run.duration.toFixed(1)}ms</span>
+      ${dev != null && !isE ? `<span class="ri-dev" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(1)}ms</span>` : '<span class="ri-dev" style="color:var(--muted)">—</span>'}
       <span class="ri-flag ${isE ? 'flag-skip' : flagMap[flag] || 'flag-ok'}">${isE ? 'excl' : flagTxt[flag] || 'ok'}</span>
       <button class="ri-excl" onclick="toggleExcl('${run.id}')">${isE ? 'restore' : 'excl'}</button>
     </div>`;
@@ -1609,9 +1609,9 @@
       else { target = parseFloat(document.getElementById('m-target')?.value) || st.mean; warn = parseFloat(document.getElementById('m-warn')?.value) || st.std; crit = parseFloat(document.getElementById('m-crit')?.value) || st.std * 2; srcLabel = 'manual'; }
 
       if (saveMethod !== 'manual') {
-        document.getElementById('m-target').value = target.toFixed(3);
-        document.getElementById('m-warn').value = warn.toFixed(3);
-        document.getElementById('m-crit').value = crit.toFixed(3);
+        document.getElementById('m-target').value = target.toFixed(1);
+        document.getElementById('m-warn').value = warn.toFixed(1);
+        document.getElementById('m-crit').value = crit.toFixed(1);
       }
 
       document.getElementById('m-preview').innerHTML = `
