@@ -1,455 +1,1247 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Command Duration Analysis</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+  <meta charset="UTF-8">
+  <title>Command Duration Analysis</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
 
-:root {
-  --bg:#06080d; --s1:#0a0d15; --s2:#0f1320; --s3:#141927;
-  --border:#1c2538; --bord2:#263048;
-  --text:#a8b8cc; --muted:#2e3f58; --muted2:#4a6078;
-  --accent:#3d8ef5; --green:#18d880; --yellow:#f5c030;
-  --red:#f04848; --orange:#f07830; --purple:#8060f8; --gold:#fbbf24;
-  --c-Init:#8060f8; --c-Home:#3b9eff; --c-GetExtend:#18d880;
-  --c-Retract:#f5a623; --c-Open:#38d9f5; --c-Close:#f0724a;
-  --c-Map:#e879f9; --c-Pump:#a3e635; --c-Vent:#fb923c;
-  --c-Align:#facc15; --c-Place:#34d399;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;min-height:100vh;padding:16px 20px;}
+    :root {
+      --bg: #06080d;
+      --s1: #0a0d15;
+      --s2: #0f1320;
+      --s3: #141927;
+      --border: #1c2538;
+      --bord2: #263048;
+      --text: #a8b8cc;
+      --muted: #2e3f58;
+      --muted2: #4a6078;
+      --accent: #3d8ef5;
+      --green: #18d880;
+      --yellow: #f5c030;
+      --red: #f04848;
+      --orange: #f07830;
+      --purple: #8060f8;
+      --gold: #fbbf24;
+      --c-Init: #8060f8;
+      --c-Home: #3b9eff;
+      --c-GetExtend: #18d880;
+      --c-Retract: #f5a623;
+      --c-Open: #38d9f5;
+      --c-Close: #f0724a;
+      --c-Map: #e879f9;
+      --c-Pump: #a3e635;
+      --c-Vent: #fb923c;
+      --c-Align: #facc15;
+      --c-Place: #34d399;
+    }
 
-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
-h1{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#fff;letter-spacing:-.4px;}
-.sub{font-size:10px;color:var(--muted2);margin-top:3px;}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.panel{background:var(--s1);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;}
-.ph{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--border);font-size:11px;}
-.ph strong{color:var(--text);}
-.ph-right{display:flex;gap:7px;align-items:center;}
-.badge{padding:2px 8px;border-radius:10px;font-size:9px;background:var(--s2);border:1px solid var(--bord2);color:var(--muted2);}
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      min-height: 100vh;
+      padding: 16px 20px;
+    }
 
-.btn{padding:5px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;border:1px solid var(--bord2);background:transparent;color:var(--muted2);transition:all .15s;}
-.btn:hover{border-color:var(--accent);color:var(--accent);}
-.btn.gold{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.07);}
-.btn.gold:hover{background:rgba(251,191,36,.16);}
-.btn.sm{padding:3px 8px;font-size:9px;}
-.btn.danger{border-color:var(--red);color:var(--red);}
-select,input[type=number]{background:var(--s3);border:1px solid var(--bord2);color:var(--text);font-family:inherit;font-size:11px;padding:5px 8px;border-radius:4px;outline:none;transition:border-color .15s;}
-select:focus,input:focus{border-color:var(--accent);}
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
 
-/* filter */
-.filter-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:12px 13px;border-bottom:1px solid var(--border);}
-.fg{display:flex;flex-direction:column;gap:4px;}
-.fl{font-size:9px;color:var(--muted2);letter-spacing:.6px;text-transform:uppercase;}
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 19px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.4px;
+    }
 
-/* stats */
-.stats-row{display:grid;grid-template-columns:repeat(7,1fr);}
-.sc{padding:8px 12px;border-right:1px solid var(--border);}
-.sc:last-child{border-right:none;}
-.sl{font-size:9px;color:var(--muted2);margin-bottom:3px;}
-.sv{font-size:15px;font-weight:700;font-family:'Syne',sans-serif;line-height:1;}
-.ss{font-size:9px;color:var(--muted);margin-top:2px;}
+    .sub {
+      font-size: 10px;
+      color: var(--muted2);
+      margin-top: 3px;
+    }
 
-/* main layout */
-.main-grid{display:grid;grid-template-columns:1fr 300px;gap:12px;margin-bottom:12px;}
-.bot-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .panel {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
 
-/* golden card */
-.golden-card{padding:10px 13px;}
-.gc-empty{color:var(--muted);font-size:11px;padding:4px 0;line-height:1.7;}
-.gc-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.gc-name{font-size:13px;font-weight:700;font-family:'Syne',sans-serif;}
-.gc-src{font-size:9px;padding:2px 7px;border-radius:10px;}
-.src-mean  {background:rgba(61,142,245,.12);color:var(--accent);border:1px solid rgba(61,142,245,.25);}
-.src-median{background:rgba(128,96,248,.12);color:var(--purple);border:1px solid rgba(128,96,248,.25);}
-.src-p90   {background:rgba(245,192,48,.12);color:var(--yellow);border:1px solid rgba(245,192,48,.25);}
-.src-manual{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.25);}
-.src-pick  {background:rgba(24,216,128,.12);color:var(--green);border:1px solid rgba(24,216,128,.25);}
-.gc-bands{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
-.gc-band{background:var(--s2);border-radius:5px;padding:7px 10px;}
-.gc-band-lbl{font-size:9px;color:var(--muted2);margin-bottom:3px;}
-.gc-band-val{font-size:16px;font-weight:700;font-family:'Syne',sans-serif;}
-.gc-band-sub{font-size:9px;color:var(--muted);margin-top:2px;}
-.gc-edit{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;}
-.gef{display:flex;flex-direction:column;gap:3px;}
-.gef label{font-size:9px;color:var(--muted2);}
-.gef input{width:70px;}
+    .ph {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 13px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
 
-/* chart */
-.chart-wrap{padding:12px 13px 8px;}
-canvas{display:block;}
-.thr-legend{display:flex;gap:12px;padding:6px 13px;border-top:1px solid var(--border);flex-wrap:wrap;}
-.tl{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted2);}
-.tl-sw{width:20px;height:3px;border-radius:1px;}
+    .ph strong {
+      color: var(--text);
+    }
 
-/* run list */
-.run-list{padding:8px;display:flex;flex-direction:column;gap:4px;max-height:460px;overflow-y:auto;}
-.run-item{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:5px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:border-color .15s;}
-.run-item:hover{border-color:var(--bord2);}
-.run-item.hov{border-color:var(--accent);}
-.run-item.excluded{opacity:.35;}
-.ri-idx{font-size:9px;color:var(--muted);width:22px;}
-.ri-bar{flex:1;height:6px;border-radius:3px;background:var(--border);overflow:hidden;position:relative;}
-.ri-bar-fill{height:100%;border-radius:3px;}
-.ri-bar-golden{position:absolute;top:0;bottom:0;width:1.5px;background:var(--gold);opacity:.9;}
-.ri-val{font-size:11px;font-weight:700;width:42px;text-align:right;}
-.ri-dev{font-size:10px;width:48px;text-align:right;font-weight:600;}
-.ri-flag{font-size:9px;padding:1px 6px;border-radius:10px;white-space:nowrap;}
-.flag-ok   {background:rgba(24,216,128,.12);color:var(--green);}
-.flag-warn {background:rgba(245,192,48,.12);color:var(--yellow);}
-.flag-crit {background:rgba(240,72,72,.12);color:var(--red);}
-.flag-skip {background:rgba(46,63,88,.3);color:var(--muted2);}
-.flag-noop {background:rgba(245,192,48,.08);color:var(--orange);}
-.ri-excl{font-size:9px;padding:2px 6px;border-radius:3px;cursor:pointer;border:1px solid var(--bord2);color:var(--muted2);font-family:inherit;background:transparent;}
-.ri-excl:hover{border-color:var(--red);color:var(--red);}
-.run-item.excluded .ri-excl{border-color:var(--green);color:var(--green);}
+    .ph-right {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
 
-/* golden list (right side) */
-.golden-library{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:460px;overflow-y:auto;}
-.gl-item{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:pointer;transition:border-color .15s;}
-.gl-item:hover{border-color:var(--bord2);}
-.gl-item.active{border-color:var(--gold);}
-.gl-head{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.gl-cmd{font-size:11px;font-weight:700;flex:1;}
-.gl-vals{display:flex;gap:10px;font-size:10px;margin-bottom:4px;}
-.gl-val-item{display:flex;flex-direction:column;gap:1px;}
-.gl-val-lbl{font-size:9px;color:var(--muted2);}
-.gl-actions{display:flex;gap:5px;margin-top:4px;}
+    .badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      background: var(--s2);
+      border: 1px solid var(--bord2);
+      color: var(--muted2);
+    }
 
-/* save modal */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:none;align-items:center;justify-content:center;}
-.modal-bg.show{display:flex;}
-.modal{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:20px 22px;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.8);}
-.modal h2{font-family:'Syne',sans-serif;font-size:15px;color:#fff;margin-bottom:14px;}
-.mf{margin-bottom:10px;}
-.mf label{font-size:9px;color:var(--muted2);display:block;margin-bottom:4px;letter-spacing:.4px;text-transform:uppercase;}
-.mf input,.mf select,.mf textarea{width:100%;background:var(--s3);border:1px solid var(--bord2);color:var(--text);font-family:inherit;font-size:11px;padding:6px 9px;border-radius:4px;outline:none;}
-.mf input:focus,.mf select:focus{border-color:var(--accent);}
-.mf textarea{resize:vertical;height:50px;}
-.mf-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-.mactions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
-.method-opts{display:flex;gap:6px;flex-wrap:wrap;}
-.mopt{padding:4px 10px;border-radius:4px;cursor:pointer;font-size:10px;border:1px solid var(--bord2);color:var(--muted2);font-family:inherit;background:transparent;transition:all .15s;}
-.mopt.on{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.08);}
+    .btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      border: 1px solid var(--bord2);
+      background: transparent;
+      color: var(--muted2);
+      transition: all .15s;
+    }
 
-/* dist */
-.dist-wrap{padding:10px 13px 8px;}
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
-/* tooltip */
-.tooltip{position:fixed;background:#0e1422;border:1px solid var(--bord2);border-radius:6px;padding:9px 13px;font-size:11px;pointer-events:none;z-index:999;display:none;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.8);}
-.tooltip.show{display:block;}
-.tt-title{font-weight:700;color:#fff;margin-bottom:7px;}
-.tt-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px;}
-.tt-l{color:var(--muted2);}
-.tt-v{font-weight:600;}
-.tt-sep{border-top:1px solid var(--border);margin:5px 0;}
+    .btn.gold {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(251, 191, 36, .07);
+    }
 
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--bord2);border-radius:2px;}
-</style>
+    .btn.gold:hover {
+      background: rgba(251, 191, 36, .16);
+    }
+
+    .btn.sm {
+      padding: 3px 8px;
+      font-size: 9px;
+    }
+
+    .btn.danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    select,
+    input[type=number] {
+      background: var(--s3);
+      border: 1px solid var(--bord2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    /* filter */
+    .filter-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .fl {
+      font-size: 9px;
+      color: var(--muted2);
+      letter-spacing: .6px;
+      text-transform: uppercase;
+    }
+
+    /* stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .sc {
+      padding: 8px 12px;
+      border-right: 1px solid var(--border);
+    }
+
+    .sc:last-child {
+      border-right: none;
+    }
+
+    .sl {
+      font-size: 9px;
+      color: var(--muted2);
+      margin-bottom: 3px;
+    }
+
+    .sv {
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      line-height: 1;
+    }
+
+    .ss {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* main layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .bot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* golden card */
+    .golden-card {
+      padding: 10px 13px;
+    }
+
+    .gc-empty {
+      color: var(--muted);
+      font-size: 11px;
+      padding: 4px 0;
+      line-height: 1.7;
+    }
+
+    .gc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .gc-name {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .gc-src {
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    .src-mean {
+      background: rgba(61, 142, 245, .12);
+      color: var(--accent);
+      border: 1px solid rgba(61, 142, 245, .25);
+    }
+
+    .src-median {
+      background: rgba(128, 96, 248, .12);
+      color: var(--purple);
+      border: 1px solid rgba(128, 96, 248, .25);
+    }
+
+    .src-p90 {
+      background: rgba(245, 192, 48, .12);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 192, 48, .25);
+    }
+
+    .src-manual {
+      background: rgba(251, 191, 36, .12);
+      color: var(--gold);
+      border: 1px solid rgba(251, 191, 36, .25);
+    }
+
+    .src-pick {
+      background: rgba(24, 216, 128, .12);
+      color: var(--green);
+      border: 1px solid rgba(24, 216, 128, .25);
+    }
+
+    .gc-bands {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .gc-band {
+      background: var(--s2);
+      border-radius: 5px;
+      padding: 7px 10px;
+    }
+
+    .gc-band-lbl {
+      font-size: 9px;
+      color: var(--muted2);
+      margin-bottom: 3px;
+    }
+
+    .gc-band-val {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .gc-band-sub {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .gc-edit {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .gef {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .gef label {
+      font-size: 9px;
+      color: var(--muted2);
+    }
+
+    .gef input {
+      width: 70px;
+    }
+
+    /* chart */
+    .chart-wrap {
+      padding: 12px 13px 8px;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .thr-legend {
+      display: flex;
+      gap: 12px;
+      padding: 6px 13px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .tl {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--muted2);
+    }
+
+    .tl-sw {
+      width: 20px;
+      height: 3px;
+      border-radius: 1px;
+    }
+
+    /* run list */
+    .run-list {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 460px;
+      overflow-y: auto;
+    }
+
+    .run-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      border-radius: 5px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .run-item:hover {
+      border-color: var(--bord2);
+    }
+
+    .run-item.hov {
+      border-color: var(--accent);
+    }
+
+    .run-item.excluded {
+      opacity: .35;
+    }
+
+    .ri-idx {
+      font-size: 9px;
+      color: var(--muted);
+      width: 22px;
+    }
+
+    .ri-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ri-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .ri-bar-golden {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1.5px;
+      background: var(--gold);
+      opacity: .9;
+    }
+
+    .ri-val {
+      font-size: 11px;
+      font-weight: 700;
+      width: 42px;
+      text-align: right;
+    }
+
+    .ri-dev {
+      font-size: 10px;
+      width: 48px;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .ri-flag {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .flag-ok {
+      background: rgba(24, 216, 128, .12);
+      color: var(--green);
+    }
+
+    .flag-warn {
+      background: rgba(245, 192, 48, .12);
+      color: var(--yellow);
+    }
+
+    .flag-crit {
+      background: rgba(240, 72, 72, .12);
+      color: var(--red);
+    }
+
+    .flag-skip {
+      background: rgba(46, 63, 88, .3);
+      color: var(--muted2);
+    }
+
+    .flag-noop {
+      background: rgba(245, 192, 48, .08);
+      color: var(--orange);
+    }
+
+    .ri-excl {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid var(--bord2);
+      color: var(--muted2);
+      font-family: inherit;
+      background: transparent;
+    }
+
+    .ri-excl:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .run-item.excluded .ri-excl {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* golden list (right side) */
+    .golden-library {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 460px;
+      overflow-y: auto;
+    }
+
+    .gl-item {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .gl-item:hover {
+      border-color: var(--bord2);
+    }
+
+    .gl-item.active {
+      border-color: var(--gold);
+    }
+
+    .gl-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .gl-cmd {
+      font-size: 11px;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .gl-vals {
+      display: flex;
+      gap: 10px;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    .gl-val-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .gl-val-lbl {
+      font-size: 9px;
+      color: var(--muted2);
+    }
+
+    .gl-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    /* save modal */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .75);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-bg.show {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--s1);
+      border: 1px solid var(--bord2);
+      border-radius: 10px;
+      padding: 20px 22px;
+      width: 400px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .8);
+    }
+
+    .modal h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+
+    .mf {
+      margin-bottom: 10px;
+    }
+
+    .mf label {
+      font-size: 9px;
+      color: var(--muted2);
+      display: block;
+      margin-bottom: 4px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    .mf input,
+    .mf select,
+    .mf textarea {
+      width: 100%;
+      background: var(--s3);
+      border: 1px solid var(--bord2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    .mf input:focus,
+    .mf select:focus {
+      border-color: var(--accent);
+    }
+
+    .mf textarea {
+      resize: vertical;
+      height: 50px;
+    }
+
+    .mf-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mactions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .method-opts {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mopt {
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 10px;
+      border: 1px solid var(--bord2);
+      color: var(--muted2);
+      font-family: inherit;
+      background: transparent;
+      transition: all .15s;
+    }
+
+    .mopt.on {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(251, 191, 36, .08);
+    }
+
+    /* dist */
+    .dist-wrap {
+      padding: 10px 13px 8px;
+    }
+
+    /* tooltip */
+    .tooltip {
+      position: fixed;
+      background: #0e1422;
+      border: 1px solid var(--bord2);
+      border-radius: 6px;
+      padding: 9px 13px;
+      font-size: 11px;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+      min-width: 180px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .8);
+    }
+
+    .tooltip.show {
+      display: block;
+    }
+
+    .tt-title {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 7px;
+    }
+
+    .tt-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 3px;
+    }
+
+    .tt-l {
+      color: var(--muted2);
+    }
+
+    .tt-v {
+      font-weight: 600;
+    }
+
+    .tt-sep {
+      border-top: 1px solid var(--border);
+      margin: 5px 0;
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bord2);
+      border-radius: 2px;
+    }
+  </style>
 </head>
+
 <body>
 
-<header>
-  <div>
-    <h1>⬡ Command Duration Analysis</h1>
-    <div class="sub">Per-command golden baseline · Warn / Critical bands · Save from data or manual</div>
-  </div>
-</header>
+  <header>
+    <div>
+      <h1>⬡ Command Duration Analysis</h1>
+      <div class="sub">Per-command golden baseline · Warn / Critical bands · Save from data or manual</div>
+    </div>
+  </header>
 
-<!-- Filter -->
-<div class="panel">
-  <div class="filter-bar">
-    <div class="fg"><div class="fl">Device Type</div>
-      <select id="sel-dtype" onchange="onFilter()">
-        <option>EFEM Robot</option><option>Vacuum Chamber</option><option>LoadPort</option><option>Aligner</option>
-      </select></div>
-    <div class="fg"><div class="fl">Device ID</div><select id="sel-dev" onchange="onFilter()"></select></div>
-    <div class="fg"><div class="fl">Command</div><select id="sel-cmd" onchange="onFilter()"></select></div>
-    <div class="fg"><div class="fl">Group By</div>
-      <select id="sel-group" onchange="onFilter()">
-        <option value="none">No grouping</option>
-        <option value="device">Per Device</option>
-      </select></div>
-    <div class="fg"><div class="fl">Outlier filter</div>
-      <select id="sel-outlier" onchange="onFilter()">
-        <option value="none">Show all</option>
-        <option value="iqr">Auto IQR</option>
-        <option value="zscore">Z-score &gt;2</option>
-      </select></div>
-    <div class="fg"><div class="fl">Min dur (no-op)</div>
-      <input type="number" id="min-dur" value="0.5" step="0.1" min="0" onchange="onFilter()"></div>
-    <div class="fg" style="justify-content:flex-end">
-      <div class="fl">​</div>
-      <button class="btn gold" onclick="openSaveModal()">⭐ Save Golden Baseline</button>
+  <!-- Filter -->
+  <div class="panel">
+    <div class="filter-bar">
+      <div class="fg">
+        <div class="fl">Device Type</div>
+        <select id="sel-dtype" onchange="onTypeChange()"></select>
+      </div>
+      <div class="fg">
+        <div class="fl">Device ID</div><select id="sel-dev" onchange="onFilter()"></select>
+      </div>
+      <div class="fg">
+        <div class="fl">Command</div><select id="sel-cmd" onchange="onFilter()"></select>
+      </div>
+      <div class="fg">
+        <div class="fl">Group By</div>
+        <select id="sel-group" onchange="onFilter()">
+          <option value="none">No grouping</option>
+          <option value="device">Per Device</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Outlier filter</div>
+        <select id="sel-outlier" onchange="onFilter()">
+          <option value="none">Show all</option>
+          <option value="iqr">Auto IQR</option>
+          <option value="zscore">Z-score &gt;2</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Min dur (no-op)</div>
+        <input type="number" id="min-dur" value="0.5" step="0.1" min="0" onchange="onFilter()">
+      </div>
+      <div class="fg" style="justify-content:flex-end">
+        <div class="fl">​</div>
+        <button class="btn gold" onclick="openSaveModal()">⭐ Save Golden Baseline</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Stats -->
-<div class="panel">
-  <div class="stats-row">
-    <div class="sc"><div class="sl">COMMAND</div><div class="sv" id="st-cmd" style="color:#fff;font-size:12px">—</div><div class="ss" id="st-dev">—</div></div>
-    <div class="sc"><div class="sl">RUNS</div><div class="sv" id="st-n" style="color:#fff">—</div><div class="ss">included</div></div>
-    <div class="sc"><div class="sl">MEAN</div><div class="sv" id="st-mean" style="color:var(--accent)">—</div><div class="ss">avg</div></div>
-    <div class="sc"><div class="sl">GOLDEN</div><div class="sv" id="st-golden" style="color:var(--gold)">—</div><div class="ss" id="st-golden-src">no baseline</div></div>
-    <div class="sc"><div class="sl">MEDIAN</div><div class="sv" id="st-med" style="color:var(--purple)">—</div><div class="ss">P50</div></div>
-    <div class="sc"><div class="sl">PEAK</div><div class="sv" id="st-max" style="color:var(--red)">—</div><div class="ss">max</div></div>
-    <div class="sc"><div class="sl">ANOMALIES</div><div class="sv" id="st-anom">—</div><div class="ss">vs golden</div></div>
+  <!-- Stats -->
+  <div class="panel">
+    <div class="stats-row">
+      <div class="sc">
+        <div class="sl">COMMAND</div>
+        <div class="sv" id="st-cmd" style="color:#fff;font-size:12px">—</div>
+        <div class="ss" id="st-dev">—</div>
+      </div>
+      <div class="sc">
+        <div class="sl">RUNS</div>
+        <div class="sv" id="st-n" style="color:#fff">—</div>
+        <div class="ss">included</div>
+      </div>
+      <div class="sc">
+        <div class="sl">MEAN</div>
+        <div class="sv" id="st-mean" style="color:var(--accent)">—</div>
+        <div class="ss">avg</div>
+      </div>
+      <div class="sc">
+        <div class="sl">GOLDEN</div>
+        <div class="sv" id="st-golden" style="color:var(--gold)">—</div>
+        <div class="ss" id="st-golden-src">no baseline</div>
+      </div>
+      <div class="sc">
+        <div class="sl">MEDIAN</div>
+        <div class="sv" id="st-med" style="color:var(--purple)">—</div>
+        <div class="ss">P50</div>
+      </div>
+      <div class="sc">
+        <div class="sl">PEAK</div>
+        <div class="sv" id="st-max" style="color:var(--red)">—</div>
+        <div class="ss">max</div>
+      </div>
+      <div class="sc">
+        <div class="sl">ANOMALIES</div>
+        <div class="sv" id="st-anom">—</div>
+        <div class="ss">vs golden</div>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- Main grid -->
-<div class="main-grid">
+  <!-- Main grid -->
+  <div class="main-grid">
 
-  <!-- LEFT -->
-  <div>
-    <!-- Golden baseline config -->
-    <div class="panel">
-      <div class="ph">
-        <strong>⭐ Golden Baseline — <span id="gc-cmd-lbl">—</span></strong>
-        <div class="ph-right">
-          <button class="btn sm" onclick="openSaveModal()">Edit / Replace</button>
-          <button class="btn sm danger" id="btn-clear-golden" onclick="clearGolden()" style="display:none">Clear</button>
+    <!-- LEFT -->
+    <div>
+      <!-- Golden baseline config -->
+      <div class="panel">
+        <div class="ph">
+          <strong>⭐ Golden Baseline — <span id="gc-cmd-lbl">—</span></strong>
+          <div class="ph-right">
+            <button class="btn sm" onclick="openSaveModal()">Edit / Replace</button>
+            <button class="btn sm danger" id="btn-clear-golden" onclick="clearGolden()"
+              style="display:none">Clear</button>
+          </div>
+        </div>
+        <div class="golden-card" id="golden-card">
+          <div class="gc-empty">No golden baseline for this command yet.<br>
+            Run some data, then click <strong style="color:var(--gold)">⭐ Save Golden Baseline</strong> to define it.
+          </div>
         </div>
       </div>
-      <div class="golden-card" id="golden-card">
-        <div class="gc-empty">No golden baseline for this command yet.<br>
-          Run some data, then click <strong style="color:var(--gold)">⭐ Save Golden Baseline</strong> to define it.</div>
+
+      <!-- Chart -->
+      <div class="panel">
+        <div class="ph">
+          <strong id="chart-title">Duration per Run</strong>
+          <span style="font-size:9px;color:var(--muted2)">hover inspect · click exclude</span>
+        </div>
+        <div class="chart-wrap"><canvas id="run-canvas" height="280"></canvas></div>
+        <div class="thr-legend">
+          <div class="tl">
+            <div class="tl-sw" style="background:var(--gold)"></div>Golden target
+          </div>
+          <div class="tl">
+            <div class="tl-sw" style="background:rgba(245,192,48,.3)"></div>Warning band
+          </div>
+          <div class="tl">
+            <div class="tl-sw" style="background:rgba(240,72,72,.2)"></div>Critical band
+          </div>
+          <div class="tl">
+            <div class="tl-sw" style="background:var(--green)"></div>Normal
+          </div>
+          <div class="tl">
+            <div class="tl-sw" style="background:var(--yellow)"></div>Warning
+          </div>
+          <div class="tl">
+            <div class="tl-sw" style="background:var(--red)"></div>Anomaly
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Chart -->
+    <!-- RIGHT: run list -->
+    <div>
+      <div class="panel">
+        <div class="ph">
+          <strong>Run List</strong>
+          <span class="badge" id="excl-badge">0 excluded</span>
+        </div>
+        <div class="run-list" id="run-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div class="bot-grid">
+    <div class="panel">
+      <div class="ph"><strong>Distribution</strong>
+        <span style="font-size:9px;color:var(--muted2)">histogram · golden overlay</span>
+      </div>
+      <div class="dist-wrap"><canvas id="dist-canvas" height="130"></canvas></div>
+    </div>
+
+    <!-- Golden library -->
     <div class="panel">
       <div class="ph">
-        <strong id="chart-title">Duration per Run</strong>
-        <span style="font-size:9px;color:var(--muted2)">hover inspect · click exclude</span>
+        <strong>Golden Baseline Library</strong>
+        <span class="badge" id="lib-count">0 saved</span>
       </div>
-      <div class="chart-wrap"><canvas id="run-canvas" height="280"></canvas></div>
-      <div class="thr-legend">
-        <div class="tl"><div class="tl-sw" style="background:var(--gold)"></div>Golden target</div>
-        <div class="tl"><div class="tl-sw" style="background:rgba(245,192,48,.3)"></div>Warning band</div>
-        <div class="tl"><div class="tl-sw" style="background:rgba(240,72,72,.2)"></div>Critical band</div>
-        <div class="tl"><div class="tl-sw" style="background:var(--green)"></div>Normal</div>
-        <div class="tl"><div class="tl-sw" style="background:var(--yellow)"></div>Warning</div>
-        <div class="tl"><div class="tl-sw" style="background:var(--red)"></div>Anomaly</div>
+      <div class="golden-library" id="golden-library">
+        <div style="padding:12px;color:var(--muted);font-size:11px">Save golden baselines above — they persist per
+          command across sessions.</div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: run list -->
-  <div>
-    <div class="panel">
-      <div class="ph">
-        <strong>Run List</strong>
-        <span class="badge" id="excl-badge">0 excluded</span>
+  <!-- Save modal -->
+  <div class="modal-bg" id="modal">
+    <div class="modal">
+      <h2>⭐ Save Golden Baseline</h2>
+      <div class="mf"><label>Command</label>
+        <div id="m-cmd-display" style="font-size:13px;font-weight:700;padding:4px 0;color:#fff"></div>
       </div>
-      <div class="run-list" id="run-list"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Bottom -->
-<div class="bot-grid">
-  <div class="panel">
-    <div class="ph"><strong>Distribution</strong>
-      <span style="font-size:9px;color:var(--muted2)">histogram · golden overlay</span></div>
-    <div class="dist-wrap"><canvas id="dist-canvas" height="130"></canvas></div>
-  </div>
-
-  <!-- Golden library -->
-  <div class="panel">
-    <div class="ph">
-      <strong>Golden Baseline Library</strong>
-      <span class="badge" id="lib-count">0 saved</span>
-    </div>
-    <div class="golden-library" id="golden-library">
-      <div style="padding:12px;color:var(--muted);font-size:11px">Save golden baselines above — they persist per command across sessions.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Save modal -->
-<div class="modal-bg" id="modal">
-  <div class="modal">
-    <h2>⭐ Save Golden Baseline</h2>
-    <div class="mf"><label>Command</label>
-      <div id="m-cmd-display" style="font-size:13px;font-weight:700;padding:4px 0;color:#fff"></div></div>
-    <div class="mf"><label>Method — how to compute target</label>
-      <div class="method-opts">
-        <button class="mopt on" id="mopt-mean"   onclick="setMethod('mean')"  >Mean</button>
-        <button class="mopt"    id="mopt-median" onclick="setMethod('median')">Median</button>
-        <button class="mopt"    id="mopt-p90"    onclick="setMethod('p90')"   >P90 (upper bound)</button>
-        <button class="mopt"    id="mopt-manual" onclick="setMethod('manual')">Manual</button>
+      <div class="mf"><label>Method — how to compute target</label>
+        <div class="method-opts">
+          <button class="mopt on" id="mopt-mean" onclick="setMethod('mean')">Mean</button>
+          <button class="mopt" id="mopt-median" onclick="setMethod('median')">Median</button>
+          <button class="mopt" id="mopt-p90" onclick="setMethod('p90')">P90 (upper bound)</button>
+          <button class="mopt" id="mopt-manual" onclick="setMethod('manual')">Manual</button>
+        </div>
+      </div>
+      <div class="mf mf-row">
+        <div><label>Target (s)</label><input type="number" id="m-target" step="0.1" placeholder="auto"></div>
+        <div><label>Warning ± (s)</label><input type="number" id="m-warn" step="0.1" placeholder="auto (1σ)"></div>
+        <div><label>Critical ± (s)</label><input type="number" id="m-crit" step="0.1" placeholder="auto (2σ)"></div>
+      </div>
+      <div style="padding:6px 10px;background:var(--s2);border-radius:5px;margin-bottom:10px;" id="m-preview"></div>
+      <div class="mf"><label>Note</label>
+        <textarea id="m-note" placeholder="Conditions, lot, environment..."></textarea>
+      </div>
+      <div class="mactions">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn gold" onclick="saveGolden()">⭐ Save</button>
       </div>
     </div>
-    <div class="mf mf-row">
-      <div><label>Target (s)</label><input type="number" id="m-target" step="0.1" placeholder="auto"></div>
-      <div><label>Warning ± (s)</label><input type="number" id="m-warn" step="0.1" placeholder="auto (1σ)"></div>
-      <div><label>Critical ± (s)</label><input type="number" id="m-crit" step="0.1" placeholder="auto (2σ)"></div>
-    </div>
-    <div style="padding:6px 10px;background:var(--s2);border-radius:5px;margin-bottom:10px;" id="m-preview"></div>
-    <div class="mf"><label>Note</label>
-      <textarea id="m-note" placeholder="Conditions, lot, environment..."></textarea></div>
-    <div class="mactions">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn gold" onclick="saveGolden()">⭐ Save</button>
-    </div>
   </div>
-</div>
 
-<div class="tooltip" id="tooltip"></div>
+  <div class="tooltip" id="tooltip"></div>
 
-<script>
-// ── RNG ──────────────────────────────────────────────────────────────────────
-function seededRng(s){s=s>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/0xFFFFFFFF;};}
-function normal(r,m,sig){const u=Math.max(.0001,r()),v=r();return m+Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*sig;}
+  <script>
+    // ── DEVICE / COMMAND DATA ─────────────────────────────────────────────────────
+    const RAW_DATA = {
+      devices: [
+        {
+          id: "EFEM-01",
+          type: "EFEM Robot",
 
-// ── DEVICE / COMMAND DATA ─────────────────────────────────────────────────────
-const DEVICE_TYPES = {
-  'EFEM Robot'    :{devices:['EFEM-01','EFEM-02','EFEM-03'],commands:['Init','Home','GetExtend','GripWafer','Retract','RotateToPM','PlaceWafer','RetractHome']},
-  'Vacuum Chamber':{devices:['VAC-01','VAC-02'],            commands:['Init','CloseGateV','StartRoughing','RoughingHold','StartTurbo','TurboRamp','PressureCheck','Vent']},
-  'LoadPort'      :{devices:['LP-A1','LP-A2','LP-B1'],      commands:['Init','Open','DockFOUP','Map','Close']},
-  'Aligner'       :{devices:['ALN-01'],                     commands:['Init','SpinUp','ScanNotch','CorrectAngle','SpinDown']},
-};
+          commands: [
+            { name: "GetExtend", s: 1708646400000, e: 1708646415000, duration: 103 },
+            { name: "GetExtend", s: 1708646420000, e: 1708646442000, duration: 20 },
+            { name: "GetExtend", s: 1708646450000, e: 1708646480000, duration: 3.0 },
 
-const CMD_PROFILE = {
-  Init:{base:3.0,sigma:.3,noop:.0}, Home:{base:7.8,sigma:1.2,noop:.15},
-  GetExtend:{base:16,sigma:2.5,noop:.20}, GripWafer:{base:1.8,sigma:.2,noop:.0},
-  Retract:{base:9.5,sigma:1.5,noop:.10}, RotateToPM:{base:5.5,sigma:.8,noop:.0},
-  PlaceWafer:{base:2.2,sigma:.3,noop:.0}, RetractHome:{base:7.5,sigma:1.0,noop:.0},
-  CloseGateV:{base:1.2,sigma:.15,noop:.12}, StartRoughing:{base:12,sigma:1.8,noop:.0},
-  RoughingHold:{base:28,sigma:4,noop:.0}, StartTurbo:{base:8,sigma:1.2,noop:.0},
-  TurboRamp:{base:45,sigma:6,noop:.0}, PressureCheck:{base:5,sigma:.8,noop:.0},
-  Vent:{base:22,sigma:3.5,noop:.0}, Open:{base:7.2,sigma:.8,noop:.12},
-  DockFOUP:{base:4.5,sigma:.6,noop:.0}, Map:{base:10.5,sigma:1.8,noop:.0},
-  Close:{base:6.8,sigma:.9,noop:.08}, SpinUp:{base:4,sigma:.5,noop:.0},
-  ScanNotch:{base:8,sigma:1.2,noop:.0}, CorrectAngle:{base:5.5,sigma:.8,noop:.0},
-  SpinDown:{base:5,sigma:.7,noop:.0},
-};
+            { name: "Home", s: 1708646500000, e: 1708646578000, duration: 7.8 },
+            { name: "Home", s: 1708646600000, e: 1708646680000, duration: 8.0 }
+          ]
+        },
+        {
+          id: "EFEM-02",
+          type: "EFEM Robot",
 
-const CMD_COLOR = {
-  Init:'#8060f8',Home:'#3b9eff',GetExtend:'#18d880',GripWafer:'#18d880',
-  Retract:'#f5a623',RotateToPM:'#3d8ef5',PlaceWafer:'#34d399',RetractHome:'#8060f8',
-  CloseGateV:'#3d8ef5',StartRoughing:'#20c8e0',RoughingHold:'#20c8e0',
-  StartTurbo:'#3d8ef5',TurboRamp:'#20c8e0',PressureCheck:'#18d880',Vent:'#f5c030',
-  Open:'#38d9f5',DockFOUP:'#f07830',Map:'#e879f9',Close:'#f0724a',
-  SpinUp:'#f5c030',ScanNotch:'#f07830',CorrectAngle:'#f07830',SpinDown:'#f5c030',
-};
+          commands: [
+            { name: "GetExtend", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "GetExtend", s: 1708646430000, e: 1708646465000, duration: 3.5 },
 
-// ── GOLDEN BASELINES — keyed by "dtype::devId::cmd" ──────────────────────────
-// { target, warn, crit, source, note, createdAt }
-let GOLDENS = {};
+            { name: "Home", s: 1708646500000, e: 1708646585000, duration: 8.5 }
+          ]
+        },
+        {
+          id: "VALVE-01",
+          type: "VALVE",
 
-// ── GENERATE RUNS ─────────────────────────────────────────────────────────────
-function generateRuns(dtype, devId, cmd, n=40) {
-  const p = CMD_PROFILE[cmd]||{base:10,sigma:2,noop:0};
-  const rng = seededRng((dtype+devId+cmd).split('').reduce((a,c)=>a+c.charCodeAt(0),0)+7);
-  return Array.from({length:n},(_,i)=>{
-    const isNoop = rng() < p.noop;
-    let dur = isNoop ? .1+rng()*.35 : Math.max(.05, normal(rng, p.base, p.sigma));
-    if(!isNoop && rng()<.05) dur *= 1.4+rng()*.7;
-    return {id:`${devId}-${cmd}-${i}`, device_id:devId, device_type:dtype, command:cmd,
-            duration:parseFloat(dur.toFixed(3)), run_index:i, is_noop:isNoop, excluded:false};
-  });
-}
+          commands: [
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
+            { name: "Opened", s: 1708646430000, e: 1708646465000, duration: 3.5 },
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let allRuns = [], displayRuns = [], hoverRunId = null, saveMethod = 'mean';
+            { name: "Idle", s: 1708646500000, e: 1708646585000, duration: 8.5 }
+          ]
+        },
+        {
+          id: "VALVE-02",
+          type: "VALVE",
 
-const fmt = v => v==null||isNaN(v)?'—':v<10?v.toFixed(2)+'s':v.toFixed(1)+'s';
-const gKey = () => {
-  const dt=document.getElementById('sel-dtype')?.value||'';
-  const dv=document.getElementById('sel-dev')?.value||'all';
-  const cm=document.getElementById('sel-cmd')?.value||'';
-  return `${dt}::${dv}::${cm}`;
-};
-const getGolden = () => GOLDENS[gKey()]||null;
+          commands: [
+            { name: "Closed", s: 1708646400000, e: 1908646420000, duration: 40.0 },
+            { name: "Opened", s: 1708646430000, e: 1908646465000, duration: 3.5 },
 
-function stats(runs) {
-  const a=runs.filter(r=>!r.excluded);if(!a.length)return null;
-  const d=a.map(r=>r.duration).sort((a,b)=>a-b),n=d.length;
-  const mean=d.reduce((a,b)=>a+b,0)/n;
-  const std=Math.sqrt(d.reduce((a,b)=>a+(b-mean)**2,0)/n);
-  return{n,mean,std,med:n%2===0?(d[n/2-1]+d[n/2])/2:d[Math.floor(n/2)],
-    p25:d[Math.floor(n*.25)],p75:d[Math.floor(n*.75)],p90:d[Math.floor(n*.9)],max:d[n-1],min:d[0]};
-}
+            { name: "Idle", s: 1708646500000, e: 1708646585000, duration: 2.5 }
+          ]
+        }
+      ]
+    };
 
-function runStatus(dur, g) {
-  if(!g) return 'ok';
-  const dev=Math.abs(dur-g.target);
-  if(dev>g.crit) return 'crit';
-  if(dev>g.warn) return 'warn';
-  return 'ok';
-}
-const STATUS_COLOR={ok:null,warn:'#f5c030',crit:'#f04848'};
+    const DEVICE_TYPES = buildDeviceTypes();
 
-// ── SELECTS ───────────────────────────────────────────────────────────────────
-function initSels() {
-  const dt=document.getElementById('sel-dtype').value;
-  const info=DEVICE_TYPES[dt]||{devices:[],commands:[]};
-  const devEl=document.getElementById('sel-dev');
-  const prevDev=devEl.value;
-  devEl.innerHTML='<option value="all">All Devices</option>'+info.devices.map(d=>`<option>${d}</option>`).join('');
-  if(info.devices.includes(prevDev)) devEl.value=prevDev;
-  const cmdEl=document.getElementById('sel-cmd');
-  const prevCmd=cmdEl.value;
-  cmdEl.innerHTML=info.commands.map(c=>`<option>${c}</option>`).join('');
-  if(info.commands.includes(prevCmd)) cmdEl.value=prevCmd;
-}
+    const CMD_COLOR = {
+      Init: '#7c5cfc', Home: '#3b9eff', GetExtend: '#1fdb8a', GetRetract: '#f5a623', Stop: "#9f2626",
+      Open: '#38d9f5', Close: '#f0724a', MoveToPos: '#e879f9', Batch: '#a3e635', TurnOff: '#fb923c',
+      SetPressure: '#facc15', SetPosition: '#60a5fa', Cycle: '#34d399', GetWaf: '#2dd4bf', PutWaf: '#10b981',
+      GetWafPrePos: '#059669', PutWafPrePos: '#047857', ExchgWaf: '#f472b6', MovToLoc: '#ec4899', PutExtend: '#14b8a6',
+      GetRetractPrePos: '#f97316', PutRetractPrePos: '#ea580c', PutRetract: '#c2410c', BRbtMov: '#8b5cf6', TchPos: '#d946ef',
+      SetTchPos: '#a21caf', AdjustTchPos: '#701a75', SetZero: '#64748b', CalibWfrDet: '#475569', MovRel: '#6366f1',
+      MotrPwr: '#4ade80', ClearWcdAveraging: '#94a3b8', BSltMov: '#818cf8', QryTchPos: '#c026d3', SetOffset: '#fb7185',
+      TurnOn: '#fbbf24', SetSpeed: '#f59e0b', SetFlow: '#06b6d4', Pressure: '#0ea5e9', SetTemp: '#ef4444',
+      // Values of old CMD_COLOR
+      GripWafer: '#18d880', Retract: '#f5a623', RotateToPM: '#3d8ef5', PlaceWafer: '#34d399', RetractHome: '#8060f8',
+      CloseGateV: '#3d8ef5', StartRoughing: '#20c8e0', RoughingHold: '#20c8e0', StartTurbo: '#3d8ef5', TurboRamp: '#20c8e0',
+      PressureCheck: '#18d880', Vent: '#f5c030', DockFOUP: '#f07830', Map: '#e879f9',
+      SpinUp: '#f5c030', ScanNotch: '#f07830', CorrectAngle: '#f07830', SpinDown: '#f5c030',
+    };
 
-function onFilter() {
-  initSels();
-  const dt=document.getElementById('sel-dtype').value;
-  const dv=document.getElementById('sel-dev').value;
-  const cm=document.getElementById('sel-cmd').value;
-  const minDur=parseFloat(document.getElementById('min-dur').value)||0;
-  const outlier=document.getElementById('sel-outlier').value;
+    // ── GOLDEN BASELINES — keyed by "dtype::devId::cmd" ──────────────────────────
+    // { target, warn, crit, source, note, createdAt }
+    let GOLDENS = {};
 
-  // load
-  const devs = dv==='all' ? (DEVICE_TYPES[dt]?.devices||[]) : [dv];
-  allRuns=[];
-  devs.forEach(dev=>allRuns.push(...generateRuns(dt,dev,cm).filter(r=>r.duration>=minDur)));
+    // ── LOAD RUNS ─────────────────────────────────────────────────────────────
+    function loadRuns(dtype, devId, cmd) {
+      let runs = [];
 
-  // outlier filter
-  const durs=allRuns.map(r=>r.duration).sort((a,b)=>a-b);
-  const n=durs.length;
-  if(outlier!=='none'&&n>=4){
-    let lo,hi;
-    if(outlier==='iqr'){const q1=durs[Math.floor(n*.25)],q3=durs[Math.floor(n*.75)],iqr=q3-q1;lo=q1-1.5*iqr;hi=q3+1.5*iqr;}
-    else{const mean=durs.reduce((a,b)=>a+b,0)/n,std=Math.sqrt(durs.reduce((a,b)=>a+(b-mean)**2,0)/n);lo=mean-2*std;hi=mean+2*std;}
-    allRuns.forEach(r=>{if(r.duration<lo||r.duration>hi)r.excluded=true;});
-  }
+      RAW_DATA.devices.forEach(dev => {
+        if (dev.type !== dtype) return;
 
-  // group sort
-  const grp=document.getElementById('sel-group').value;
-  displayRuns=[...allRuns].sort((a,b)=>grp==='device'?a.device_id.localeCompare(b.device_id)||a.run_index-b.run_index:a.run_index-b.run_index);
+        if (devId !== "all" && dev.id !== devId) return;
 
-  redrawAll();
-}
+        dev.commands.forEach((c, idx) => {
+          if (c.name !== cmd) return;
 
-// ── GOLDEN CARD ───────────────────────────────────────────────────────────────
-function renderGoldenCard() {
-  const g=getGolden();
-  const cm=document.getElementById('sel-cmd')?.value||'—';
-  const color=CMD_COLOR[cm]||'#888';
-  document.getElementById('gc-cmd-lbl').textContent=cm;
-  document.getElementById('btn-clear-golden').style.display=g?'':'none';
+          runs.push({
+            id: `${dev.id}-${c.name}-${idx}`,
+            device_id: dev.id,
+            device_type: dev.type,
+            command: c.name,
+            duration: c.duration,
+            run_index: idx,
+            excluded: false
+          });
+        });
+      });
 
-  if(!g){
-    document.getElementById('golden-card').innerHTML=`<div class="gc-empty">No golden baseline for <strong style="color:${color}">${cm}</strong> yet.<br>
+      return runs;
+    }
+
+    function buildDeviceTypes() {
+      const map = {};
+
+      RAW_DATA.devices.forEach(dev => {
+        if (!map[dev.type]) {
+          map[dev.type] = {
+            devices: [],
+            commands: []
+          };
+        }
+
+        if (!map[dev.type].devices.includes(dev.id)) {
+          map[dev.type].devices.push(dev.id);
+        }
+
+        dev.commands.forEach(c => {
+          if (!map[dev.type].commands.includes(c.name)) {
+            map[dev.type].commands.push(c.name);
+          }
+        });
+      });
+
+      return map;
+    }
+
+
+    // ── STATE ─────────────────────────────────────────────────────────────────────
+    let allRuns = [], displayRuns = [], hoverRunId = null, saveMethod = 'mean';
+
+    const fmt = v => v == null || isNaN(v) ? '—' : v < 10 ? v.toFixed(2) + 's' : v.toFixed(1) + 's';
+    const gKey = () => {
+      const dt = document.getElementById('sel-dtype')?.value || '';
+      const dv = document.getElementById('sel-dev')?.value || 'all';
+      const cm = document.getElementById('sel-cmd')?.value || '';
+      return `${dt}::${dv}::${cm}`;
+    };
+    const getGolden = () => GOLDENS[gKey()] || null;
+
+    function stats(runs) {
+      const a = runs.filter(r => !r.excluded); if (!a.length) return null;
+      const d = a.map(r => r.duration).sort((a, b) => a - b), n = d.length;
+      const mean = d.reduce((a, b) => a + b, 0) / n;
+      const std = Math.sqrt(d.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+      return {
+        n, mean, std, med: n % 2 === 0 ? (d[n / 2 - 1] + d[n / 2]) / 2 : d[Math.floor(n / 2)],
+        p25: d[Math.floor(n * .25)], p75: d[Math.floor(n * .75)], p90: d[Math.floor(n * .9)], max: d[n - 1], min: d[0]
+      };
+    }
+
+    function runStatus(dur, g) {
+      if (!g) return 'ok';
+      const dev = Math.abs(dur - g.target);
+      if (dev > g.crit) return 'crit';
+      if (dev > g.warn) return 'warn';
+      return 'ok';
+    }
+    const STATUS_COLOR = { ok: null, warn: '#f5c030', crit: '#f04848' };
+
+    // ── SELECTS ───────────────────────────────────────────────────────────────────
+    function initSels() {
+      const dtypeEl = document.getElementById('sel-dtype');
+      const devEl = document.getElementById('sel-dev');
+      const cmdEl = document.getElementById('sel-cmd');
+
+      // ===== DEVICE TYPE =====
+      const types = [...new Set(RAW_DATA.devices.map(d => d.type))];
+
+      dtypeEl.innerHTML =
+        types.map(t => `<option value="${t}">${t}</option>`).join('');
+
+      const selectedType = types[0];
+      dtypeEl.value = selectedType;
+
+      // ===== DEVICE =====
+      const devices = RAW_DATA.devices
+        .filter(d => d.type === selectedType)
+        .map(d => d.id);
+
+      devEl.innerHTML =
+        '<option value="all">All Devices</option>' +
+        devices.map(d => `<option value="${d}">${d}</option>`).join('');
+      devEl.value = "all";
+
+      // ===== COMMAND =====
+      let cmds = [];
+
+      RAW_DATA.devices.forEach(d => {
+        if (d.type !== selectedType) return;
+
+        d.commands.forEach(c => cmds.push(c.name));
+      });
+
+      cmds = [...new Set(cmds)];
+
+      cmdEl.innerHTML =
+        cmds.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      cmdEl.value = cmds[0];
+    }
+
+
+    function onFilter() {
+      const dt = document.getElementById('sel-dtype').value;
+      const dv = document.getElementById('sel-dev').value;
+      const cm = document.getElementById('sel-cmd').value;
+
+      const minDur = parseFloat(document.getElementById('min-dur').value) || 0;
+      const outlier = document.getElementById('sel-outlier').value;
+
+      allRuns = loadRuns(dt, dv, cm);
+
+      allRuns = allRuns.filter(r => r.duration >= minDur);
+
+      // outlier filter
+      const durs = allRuns.map(r => r.duration).sort((a, b) => a - b);
+      const n = durs.length;
+      if (outlier !== 'none' && n >= 4) {
+        let lo, hi;
+        if (outlier === 'iqr') { const q1 = durs[Math.floor(n * .25)], q3 = durs[Math.floor(n * .75)], iqr = q3 - q1; lo = q1 - 1.5 * iqr; hi = q3 + 1.5 * iqr; }
+        else if (outlier === 'zscore') { const mean = durs.reduce((a, b) => a + b, 0) / n, std = Math.sqrt(durs.reduce((a, b) => a + (b - mean) ** 2, 0) / n); lo = mean - 2 * std; hi = mean + 2 * std; }
+        allRuns.forEach(r => { if (r.duration < lo || r.duration > hi) r.excluded = true; });
+      }
+
+      // group sort
+      const grp = document.getElementById('sel-group').value;
+      displayRuns = [...allRuns].sort((a, b) => grp === 'device' ? a.device_id.localeCompare(b.device_id) || a.run_index - b.run_index : a.run_index - b.run_index);
+
+      redrawAll();
+    }
+
+    function onTypeChange() {
+      const dt = document.getElementById('sel-dtype').value;
+      const devEl = document.getElementById('sel-dev');
+      const cmdEl = document.getElementById('sel-cmd');
+
+      // ===== DEVICE =====
+      const devices = RAW_DATA.devices
+        .filter(d => d.type === dt)
+        .map(d => d.id);
+
+      devEl.innerHTML =
+        '<option value="all">All Devices</option>' +
+        devices.map(d => `<option value="${d}">${d}</option>`).join('');
+
+      devEl.value = "all";
+
+      // ===== COMMAND =====
+      let cmds = [];
+
+      RAW_DATA.devices.forEach(d => {
+        if (d.type !== dt) return;
+        d.commands.forEach(c => cmds.push(c.name));
+      });
+
+      cmds = [...new Set(cmds)];
+
+      cmdEl.innerHTML =
+        cmds.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      cmdEl.value = cmds[0];
+
+      onFilter();
+    }
+
+    // ── GOLDEN CARD ───────────────────────────────────────────────────────────────
+    function renderGoldenCard() {
+      const g = getGolden();
+      const cm = document.getElementById('sel-cmd')?.value || '—';
+      const color = CMD_COLOR[cm] || '#888';
+      document.getElementById('gc-cmd-lbl').textContent = cm;
+      document.getElementById('btn-clear-golden').style.display = g ? '' : 'none';
+
+      if (!g) {
+        document.getElementById('golden-card').innerHTML = `<div class="gc-empty">No golden baseline for <strong style="color:${color}">${cm}</strong> yet.<br>
       Click <strong style="color:var(--gold)">⭐ Save Golden Baseline</strong> to define from current data.</div>`;
-    return;
-  }
+        return;
+      }
 
-  const srcLabels={mean:'Mean',median:'Median',p90:'P90',manual:'Manual',pick:'Picked run'};
-  document.getElementById('golden-card').innerHTML=`
+      const srcLabels = { mean: 'Mean', median: 'Median', p90: 'P90', manual: 'Manual', pick: 'Picked run' };
+      document.getElementById('golden-card').innerHTML = `
     <div class="gc-header">
       <span class="gc-name" style="color:${color}">${cm}</span>
-      <span class="gc-src src-${g.source}">${srcLabels[g.source]||g.source}</span>
+      <span class="gc-src src-${g.source}">${srcLabels[g.source] || g.source}</span>
       <span style="font-size:9px;color:var(--muted2);margin-left:auto">${g.createdAt}</span>
     </div>
     <div class="gc-bands">
@@ -458,363 +1250,359 @@ function renderGoldenCard() {
         <div class="gc-band-sub">golden duration</div></div>
       <div class="gc-band"><div class="gc-band-lbl">⚠ Warning ±</div>
         <div class="gc-band-val" style="color:var(--yellow)">${fmt(g.warn)}</div>
-        <div class="gc-band-sub">${fmt(g.target-g.warn)} – ${fmt(g.target+g.warn)}</div></div>
+        <div class="gc-band-sub">${fmt(g.target - g.warn)} – ${fmt(g.target + g.warn)}</div></div>
       <div class="gc-band"><div class="gc-band-lbl">✖ Critical ±</div>
         <div class="gc-band-val" style="color:var(--red)">${fmt(g.crit)}</div>
-        <div class="gc-band-sub">${fmt(g.target-g.crit)} – ${fmt(g.target+g.crit)}</div></div>
+        <div class="gc-band-sub">${fmt(g.target - g.crit)} – ${fmt(g.target + g.crit)}</div></div>
     </div>
     <div class="gc-edit">
       <div class="gef"><label>Target (s)</label><input type="number" id="ge-t" value="${g.target}" step="0.1" onchange="inlineEditGolden()"></div>
       <div class="gef"><label>Warn ± (s)</label><input type="number" id="ge-w" value="${g.warn}"   step="0.1" onchange="inlineEditGolden()"></div>
       <div class="gef"><label>Crit ± (s)</label><input type="number" id="ge-c" value="${g.crit}"   step="0.1" onchange="inlineEditGolden()"></div>
-      ${g.note?`<div style="font-size:9px;color:var(--muted2);align-self:flex-end;padding-bottom:2px;font-style:italic">${g.note}</div>`:''}
+      ${g.note ? `<div style="font-size:9px;color:var(--muted2);align-self:flex-end;padding-bottom:2px;font-style:italic">${g.note}</div>` : ''}
     </div>`;
-}
+    }
 
-function inlineEditGolden(){
-  const k=gKey();if(!GOLDENS[k])return;
-  GOLDENS[k].target=parseFloat(document.getElementById('ge-t')?.value)||GOLDENS[k].target;
-  GOLDENS[k].warn  =parseFloat(document.getElementById('ge-w')?.value)||GOLDENS[k].warn;
-  GOLDENS[k].crit  =parseFloat(document.getElementById('ge-c')?.value)||GOLDENS[k].crit;
-  GOLDENS[k].source='manual';
-  redrawAll();
-}
+    function inlineEditGolden() {
+      const k = gKey(); if (!GOLDENS[k]) return;
+      GOLDENS[k].target = parseFloat(document.getElementById('ge-t')?.value) || GOLDENS[k].target;
+      GOLDENS[k].warn = parseFloat(document.getElementById('ge-w')?.value) || GOLDENS[k].warn;
+      GOLDENS[k].crit = parseFloat(document.getElementById('ge-c')?.value) || GOLDENS[k].crit;
+      GOLDENS[k].source = 'manual';
+      redrawAll();
+    }
 
-function clearGolden(){
-  delete GOLDENS[gKey()];
-  redrawAll();
-}
+    function clearGolden() {
+      delete GOLDENS[gKey()];
+      redrawAll();
+    }
 
-// ── STATS BAR ─────────────────────────────────────────────────────────────────
-function updateStats(){
-  const g=getGolden();
-  const st=stats(displayRuns);
-  const cm=document.getElementById('sel-cmd').value;
-  const dv=document.getElementById('sel-dev').value;
-  const anom=g?displayRuns.filter(r=>!r.excluded&&Math.abs(r.duration-g.target)>g.crit).length:0;
+    // ── STATS BAR ─────────────────────────────────────────────────────────────────
+    function updateStats() {
+      const g = getGolden();
+      const st = stats(displayRuns);
+      const cm = document.getElementById('sel-cmd').value;
+      const dv = document.getElementById('sel-dev').value;
+      const anom = g ? displayRuns.filter(r => !r.excluded && Math.abs(r.duration - g.target) > g.crit).length : 0;
 
-  document.getElementById('st-cmd').textContent=cm;
-  document.getElementById('st-dev').textContent=dv==='all'?'All devices':dv;
-  document.getElementById('st-n').textContent=st?st.n:'—';
-  document.getElementById('st-mean').textContent=st?fmt(st.mean):'—';
-  document.getElementById('st-med').textContent=st?fmt(st.med):'—';
-  document.getElementById('st-max').textContent=st?fmt(st.max):'—';
-  document.getElementById('st-golden').textContent=g?fmt(g.target):'—';
-  document.getElementById('st-golden-src').textContent=g?g.source:'no baseline';
-  const ae=document.getElementById('st-anom');ae.textContent=g?anom:'—';ae.style.color=anom>0?'var(--red)':'var(--green)';
-  document.getElementById('chart-title').textContent=`${cm} — Duration per Run`;
-}
+      document.getElementById('st-cmd').textContent = cm;
+      document.getElementById('st-dev').textContent = dv === 'all' ? 'All devices' : dv;
+      document.getElementById('st-n').textContent = st ? st.n : '—';
+      document.getElementById('st-mean').textContent = st ? fmt(st.mean) : '—';
+      document.getElementById('st-med').textContent = st ? fmt(st.med) : '—';
+      document.getElementById('st-max').textContent = st ? fmt(st.max) : '—';
+      document.getElementById('st-golden').textContent = g ? fmt(g.target) : '—';
+      document.getElementById('st-golden-src').textContent = g ? g.source : 'no baseline';
+      const ae = document.getElementById('st-anom'); ae.textContent = g ? anom : '—'; ae.style.color = anom > 0 ? 'var(--red)' : 'var(--green)';
+      document.getElementById('chart-title').textContent = `${cm} — Duration per Run`;
+    }
 
-// ── RUN CHART ─────────────────────────────────────────────────────────────────
-function drawRunChart(){
-  const cv=document.getElementById('run-canvas'),dpr=window.devicePixelRatio||1;
-  const W=cv.parentElement.clientWidth-26;
-  cv.style.width=W+'px';cv.width=W*dpr;cv.height=280*dpr;cv.style.height='280px';
-  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,280);
-  if(!displayRuns.length)return;
+    // ── RUN CHART ─────────────────────────────────────────────────────────────────
+    function drawRunChart() {
+      const cv = document.getElementById('run-canvas'), dpr = window.devicePixelRatio || 1;
+      const W = cv.parentElement.clientWidth - 26;
+      cv.style.width = W + 'px'; cv.width = W * dpr; cv.height = 280 * dpr; cv.style.height = '280px';
+      const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, 280);
+      if (!displayRuns.length) return;
 
-  const g=getGolden();
-  const PL=50,PR=14,PT=22,PB=30,cW=W-PL-PR,cH=280-PT-PB;
-  const maxV=Math.max(...displayRuns.map(r=>r.duration),g?g.target+g.crit:0)*1.1;
-  const toY=v=>PT+cH-(v/maxV)*cH;
+      const g = getGolden();
+      const PL = 50, PR = 14, PT = 22, PB = 30, cW = W - PL - PR, cH = 280 - PT - PB;
+      const maxV = Math.max(...displayRuns.map(r => r.duration), g ? g.target + g.crit : 0) * 1.1;
+      const toY = v => PT + cH - (v / maxV) * cH;
 
-  // grid
-  ctx.strokeStyle='#1c2538';ctx.lineWidth=1;
-  for(let i=0;i<=5;i++){const v=maxV*i/5,y=toY(v);ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+cW,y);ctx.stroke();ctx.fillStyle='#2e3f58';ctx.font='9px JetBrains Mono';ctx.textAlign='right';ctx.fillText(fmt(v),PL-4,y+3);}
+      // grid
+      ctx.strokeStyle = '#1c2538'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) { const v = maxV * i / 5, y = toY(v); ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y); ctx.stroke(); ctx.fillStyle = '#2e3f58'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'right'; ctx.fillText(fmt(v), PL - 4, y + 3); }
 
-  // golden bands
-  if(g){
-    const yC1=toY(g.target+g.crit),yC0=toY(Math.max(0,g.target-g.crit));
-    ctx.fillStyle='rgba(240,72,72,.08)';ctx.fillRect(PL,0,cW,yC1);ctx.fillRect(PL,yC0,cW,PT+cH-yC0);
-    const yW1=toY(g.target+g.warn),yW0=toY(Math.max(0,g.target-g.warn));
-    ctx.fillStyle='rgba(245,192,48,.08)';ctx.fillRect(PL,yC1,cW,yW1-yC1);ctx.fillRect(PL,yW0,cW,yC0-yW0);
-    ctx.fillStyle='rgba(24,216,128,.04)';ctx.fillRect(PL,yW1,cW,yW0-yW1);
-    const yG=toY(g.target);
-    ctx.strokeStyle='rgba(251,191,36,.85)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
-    ctx.beginPath();ctx.moveTo(PL,yG);ctx.lineTo(PL+cW,yG);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(251,191,36,.75)';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
-    ctx.fillText('⭐ '+fmt(g.target),PL+4,yG-4);
-  }
+      // golden bands
+      if (g) {
+        const yC1 = toY(g.target + g.crit), yC0 = toY(Math.max(0, g.target - g.crit));
+        ctx.fillStyle = 'rgba(240,72,72,.08)'; ctx.fillRect(PL, 0, cW, yC1); ctx.fillRect(PL, yC0, cW, PT + cH - yC0);
+        const yW1 = toY(g.target + g.warn), yW0 = toY(Math.max(0, g.target - g.warn));
+        ctx.fillStyle = 'rgba(245,192,48,.08)'; ctx.fillRect(PL, yC1, cW, yW1 - yC1); ctx.fillRect(PL, yW0, cW, yC0 - yW0);
+        ctx.fillStyle = 'rgba(24,216,128,.04)'; ctx.fillRect(PL, yW1, cW, yW0 - yW1);
+        const yG = toY(g.target);
+        ctx.strokeStyle = 'rgba(251,191,36,.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(PL, yG); ctx.lineTo(PL + cW, yG); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(251,191,36,.75)'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'left';
+        ctx.fillText('⭐ ' + fmt(g.target), PL + 4, yG - 4);
+      }
 
-  // mean line (lighter, background reference)
-  const st=stats(displayRuns);
-  if(st){
-    const yM=toY(st.mean);
-    ctx.strokeStyle='rgba(61,142,245,.35)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
-    ctx.beginPath();ctx.moveTo(PL,yM);ctx.lineTo(PL+cW,yM);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(61,142,245,.4)';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
-    ctx.fillText('μ '+fmt(st.mean),PL+cW-4,yM-3);
-  }
+      // mean line (lighter, background reference)
+      const st = stats(displayRuns);
+      if (st) {
+        const yM = toY(st.mean);
+        ctx.strokeStyle = 'rgba(61,142,245,.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(PL, yM); ctx.lineTo(PL + cW, yM); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(61,142,245,.4)'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'right';
+        ctx.fillText('μ ' + fmt(st.mean), PL + cW - 4, yM - 3);
+      }
 
-  // group separators
-  const grp=document.getElementById('sel-group').value;
-  if(grp==='device'){
-    const devs=[...new Set(displayRuns.map(r=>r.device_id))];
-    let idx=0;
-    devs.forEach((dev,di)=>{
-      const dr=displayRuns.filter(r=>r.device_id===dev);
-      const x=PL+idx*(cW/displayRuns.length);
-      if(di>0){ctx.strokeStyle='#263048';ctx.lineWidth=1;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+cH);ctx.stroke();ctx.setLineDash([]);}
-      ctx.fillStyle='#263048';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
-      ctx.fillText(dev,x+dr.length*(cW/displayRuns.length)/2,PT+cH+18);
-      idx+=dr.length;
+      // group separators
+      const grp = document.getElementById('sel-group').value;
+      if (grp === 'device') {
+        const devs = [...new Set(displayRuns.map(r => r.device_id))];
+        let idx = 0;
+        devs.forEach((dev, di) => {
+          const dr = displayRuns.filter(r => r.device_id === dev);
+          const x = PL + idx * (cW / displayRuns.length);
+          if (di > 0) { ctx.strokeStyle = '#263048'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, PT); ctx.lineTo(x, PT + cH); ctx.stroke(); ctx.setLineDash([]); }
+          ctx.fillStyle = '#263048'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+          ctx.fillText(dev, x + dr.length * (cW / displayRuns.length) / 2, PT + cH + 18);
+          idx += dr.length;
+        });
+      } else {
+        ctx.fillStyle = '#2e3f58'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'left'; ctx.fillText('run index →', PL, PT + cH + 18);
+      }
+
+      const dW = cW / Math.max(displayRuns.length, 1);
+      cv._dots = [];
+      displayRuns.forEach((run, i) => {
+        const x = PL + (i + .5) * dW, y = toY(run.duration);
+        const status = runStatus(run.duration, g);
+        const sc = STATUS_COLOR[status] || (CMD_COLOR[run.command] || '#3d8ef5');
+        const isH = hoverRunId === run.id, isE = run.excluded;
+        if (!isE) { ctx.fillStyle = (sc || CMD_COLOR[run.command] || '#3d8ef5') + '22'; ctx.fillRect(x - 1.5, y, 3, PT + cH - y); }
+        const r = isH ? 6 : 3.5; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        if (isE) { ctx.strokeStyle = '#263048'; ctx.lineWidth = 1; ctx.fillStyle = '#1c2538'; ctx.fill(); ctx.stroke(); }
+        else { ctx.fillStyle = isH ? '#fff' : (sc || CMD_COLOR[run.command] || '#3d8ef5'); ctx.shadowColor = sc || '#3d8ef5'; ctx.shadowBlur = isH ? 10 : 3; ctx.fill(); ctx.shadowBlur = 0; }
+        cv._dots.push({ x, y, run });
+      });
+    }
+
+    document.getElementById('run-canvas').addEventListener('mousemove', function (e) {
+      if (!this._dots) return;
+      const rect = this.getBoundingClientRect(), mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      let cl = null, md = 12; this._dots.forEach(d => { const dist = Math.hypot(d.x - mx, d.y - my); if (dist < md) { md = dist; cl = d; } });
+      if (cl) { hoverRunId = cl.run.id; showTip(e, cl.run); } else if (hoverRunId) { hoverRunId = null; hideTip(); }
+      redrawAll();
     });
-  } else {
-    ctx.fillStyle='#2e3f58';ctx.font='9px JetBrains Mono';ctx.textAlign='left';ctx.fillText('run index →',PL,PT+cH+18);
-  }
+    document.getElementById('run-canvas').addEventListener('mouseleave', () => { hoverRunId = null; hideTip(); redrawAll(); });
+    document.getElementById('run-canvas').addEventListener('click', function (e) {
+      if (!this._dots) return;
+      const rect = this.getBoundingClientRect(), mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      let cl = null, md = 12; this._dots.forEach(d => { const dist = Math.hypot(d.x - mx, d.y - my); if (dist < md) { md = dist; cl = d; } });
+      if (cl) { cl.run.excluded = !cl.run.excluded; redrawAll(); }
+    });
 
-  const dW=cW/Math.max(displayRuns.length,1);
-  cv._dots=[];
-  displayRuns.forEach((run,i)=>{
-    const x=PL+(i+.5)*dW,y=toY(run.duration);
-    const status=runStatus(run.duration,g);
-    const sc=STATUS_COLOR[status]||(CMD_COLOR[run.command]||'#3d8ef5');
-    const isH=hoverRunId===run.id,isE=run.excluded;
-    if(!isE){ctx.fillStyle=(sc||CMD_COLOR[run.command]||'#3d8ef5')+'22';ctx.fillRect(x-1.5,y,3,PT+cH-y);}
-    const r=isH?6:3.5;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
-    if(isE){ctx.strokeStyle='#263048';ctx.lineWidth=1;ctx.fillStyle='#1c2538';ctx.fill();ctx.stroke();}
-    else{ctx.fillStyle=isH?'#fff':(sc||CMD_COLOR[run.command]||'#3d8ef5');ctx.shadowColor=sc||'#3d8ef5';ctx.shadowBlur=isH?10:3;ctx.fill();ctx.shadowBlur=0;}
-    cv._dots.push({x,y,run});
-  });
-}
-
-document.getElementById('run-canvas').addEventListener('mousemove',function(e){
-  if(!this._dots)return;
-  const rect=this.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  let cl=null,md=12;this._dots.forEach(d=>{const dist=Math.hypot(d.x-mx,d.y-my);if(dist<md){md=dist;cl=d;}});
-  if(cl){hoverRunId=cl.run.id;showTip(e,cl.run);}else if(hoverRunId){hoverRunId=null;hideTip();}
-  redrawAll();
-});
-document.getElementById('run-canvas').addEventListener('mouseleave',()=>{hoverRunId=null;hideTip();redrawAll();});
-document.getElementById('run-canvas').addEventListener('click',function(e){
-  if(!this._dots)return;
-  const rect=this.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  let cl=null,md=12;this._dots.forEach(d=>{const dist=Math.hypot(d.x-mx,d.y-my);if(dist<md){md=dist;cl=d;}});
-  if(cl){cl.run.excluded=!cl.run.excluded;redrawAll();}
-});
-
-function showTip(e,run){
-  const tt=document.getElementById('tooltip'),g=getGolden();
-  const c=CMD_COLOR[run.command]||'#3d8ef5';
-  const dev=g?(run.duration-g.target):null;
-  const st=runStatus(run.duration,g);
-  const sc=STATUS_COLOR[st]||c;
-  tt.innerHTML=`<div class="tt-title" style="color:${c}">${run.command}</div>
+    function showTip(e, run) {
+      const tt = document.getElementById('tooltip'), g = getGolden();
+      const c = CMD_COLOR[run.command] || '#3d8ef5';
+      const dev = g ? (run.duration - g.target) : null;
+      const st = runStatus(run.duration, g);
+      const sc = STATUS_COLOR[st] || c;
+      tt.innerHTML = `<div class="tt-title" style="color:${c}">${run.command}</div>
     <div class="tt-row"><span class="tt-l">Device</span><span class="tt-v">${run.device_id}</span></div>
-    <div class="tt-row"><span class="tt-l">Duration</span><span class="tt-v" style="color:${sc||c}">${run.duration.toFixed(3)}s</span></div>
-    ${dev!=null?`<div class="tt-row"><span class="tt-l">vs golden</span><span class="tt-v" style="color:${dev>0?'var(--red)':'var(--green)'}">${dev>0?'+':''}${dev.toFixed(3)}s</span></div>`:''}
-    ${st!=='ok'?`<div style="color:${sc};font-size:10px;margin-top:4px">${st==='warn'?'⚠ WARNING':'✖ CRITICAL'} — outside golden band</div>`:''}
-    ${run.is_noop?'<div style="color:var(--orange);font-size:10px;margin-top:4px">⚡ No-op (already in position)</div>':''}
-    <div style="font-size:9px;color:var(--muted);margin-top:4px">Click to ${run.excluded?'restore':'exclude'}</div>`;
-  tt.classList.add('show');
-  tt.style.left=Math.min(e.clientX+14,window.innerWidth-190)+'px';
-  tt.style.top=Math.max(10,e.clientY-10)+'px';
-}
-function hideTip(){document.getElementById('tooltip').classList.remove('show');}
+    <div class="tt-row"><span class="tt-l">Duration</span><span class="tt-v" style="color:${sc || c}">${run.duration.toFixed(3)}s</span></div>
+    ${dev != null ? `<div class="tt-row"><span class="tt-l">vs golden</span><span class="tt-v" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(3)}s</span></div>` : ''}
+    ${st !== 'ok' ? `<div style="color:${sc};font-size:10px;margin-top:4px">${st === 'warn' ? '⚠ WARNING' : '✖ CRITICAL'} — outside golden band</div>` : ''}
+    ${run.is_noop ? '<div style="color:var(--orange);font-size:10px;margin-top:4px">⚡ No-op (already in position)</div>' : ''}
+    <div style="font-size:9px;color:var(--muted);margin-top:4px">Click to ${run.excluded ? 'restore' : 'exclude'}</div>`;
+      tt.classList.add('show');
+      tt.style.left = Math.min(e.clientX + 14, window.innerWidth - 190) + 'px';
+      tt.style.top = Math.max(10, e.clientY - 10) + 'px';
+    }
+    function hideTip() { document.getElementById('tooltip').classList.remove('show'); }
 
-// ── DISTRIBUTION CHART ────────────────────────────────────────────────────────
-function drawDistChart(){
-  const cv=document.getElementById('dist-canvas'),dpr=window.devicePixelRatio||1;
-  const W=cv.parentElement.clientWidth-26;
-  cv.style.width=W+'px';cv.width=W*dpr;cv.height=130*dpr;cv.style.height='130px';
-  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,130);
-  const active=displayRuns.filter(r=>!r.excluded);if(active.length<2)return;
-  const g=getGolden();
-  const PL=50,PR=14,PT=8,PB=28,cW=W-PL-PR,cH=130-PT-PB;
-  const durs=active.map(r=>r.duration);
-  const minV=Math.min(...durs)*.9,maxV=Math.max(...durs,...(g?[g.target+g.crit]:[]))*1.05;
-  const range=maxV-minV||1,toX=v=>PL+((v-minV)/range)*cW;
-  const BINS=Math.min(40,Math.max(10,Math.round(Math.sqrt(durs.length)*2)));
-  const buckets=Array(BINS).fill(0);
-  durs.forEach(d=>{const bi=Math.min(BINS-1,Math.floor((d-minV)/range*BINS));buckets[bi]++;});
-  const maxC=Math.max(...buckets);
-  const cm=document.getElementById('sel-cmd').value,cmdC=CMD_COLOR[cm]||'#3d8ef5';
+    // ── DISTRIBUTION CHART ────────────────────────────────────────────────────────
+    function drawDistChart() {
+      const cv = document.getElementById('dist-canvas'), dpr = window.devicePixelRatio || 1;
+      const W = cv.parentElement.clientWidth - 26;
+      cv.style.width = W + 'px'; cv.width = W * dpr; cv.height = 130 * dpr; cv.style.height = '130px';
+      const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, 130);
+      const active = displayRuns.filter(r => !r.excluded); if (active.length < 2) return;
+      const g = getGolden();
+      const PL = 50, PR = 14, PT = 8, PB = 28, cW = W - PL - PR, cH = 130 - PT - PB;
+      const durs = active.map(r => r.duration);
+      const minV = Math.min(...durs) * .9, maxV = Math.max(...durs, ...(g ? [g.target + g.crit] : [])) * 1.05;
+      const range = maxV - minV || 1, toX = v => PL + ((v - minV) / range) * cW;
+      const BINS = Math.min(40, Math.max(10, Math.round(Math.sqrt(durs.length) * 2)));
+      const buckets = Array(BINS).fill(0);
+      durs.forEach(d => { const bi = Math.min(BINS - 1, Math.floor((d - minV) / range * BINS)); buckets[bi]++; });
+      const maxC = Math.max(...buckets);
+      const cm = document.getElementById('sel-cmd').value, cmdC = CMD_COLOR[cm] || '#3d8ef5';
 
-  // colored bars by status
-  for(let i=0;i<BINS;i++){
-    if(!buckets[i])continue;
-    const bv=minV+i*(range/BINS)+range/BINS/2;
-    const st=runStatus(bv,g);
-    const c=STATUS_COLOR[st]||cmdC;
-    ctx.fillStyle=(c||cmdC)+'99';
-    const x=PL+i*(cW/BINS),bw=cW/BINS-.5,h=(buckets[i]/maxC)*cH;
-    ctx.fillRect(x,PT+cH-h,bw,h);
-  }
+      // colored bars by status
+      for (let i = 0; i < BINS; i++) {
+        if (!buckets[i]) continue;
+        const bv = minV + i * (range / BINS) + range / BINS / 2;
+        const st = runStatus(bv, g);
+        const c = STATUS_COLOR[st] || cmdC;
+        ctx.fillStyle = (c || cmdC) + '99';
+        const x = PL + i * (cW / BINS), bw = cW / BINS - .5, h = (buckets[i] / maxC) * cH;
+        ctx.fillRect(x, PT + cH - h, bw, h);
+      }
 
-  const st=stats(active);
-  if(st){const xm=toX(st.mean);ctx.strokeStyle='rgba(61,142,245,.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(xm,PT);ctx.lineTo(xm,PT+cH);ctx.stroke();ctx.setLineDash([]);}
-  if(g){const xg=toX(g.target);ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(xg,PT);ctx.lineTo(xg,PT+cH);ctx.stroke();ctx.setLineDash([]);}
-  if(hoverRunId){const hr=active.find(r=>r.id===hoverRunId);if(hr){const xh=toX(hr.duration);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(xh,PT);ctx.lineTo(xh,PT+cH);ctx.stroke();}}
-  ctx.fillStyle='#2e3f58';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
-  for(let i=0;i<=4;i++)ctx.fillText(fmt(minV+range*i/4),PL+(i/4)*cW,PT+cH+16);
-  if(st)ctx.fillText(`μ=${fmt(st.mean)}  σ=${fmt(st.std)}  n=${st.n}${g?'  ⭐='+fmt(g.target):''}`,PL+cW/2,PT+cH+26);
-}
+      const st = stats(active);
+      if (st) { const xm = toX(st.mean); ctx.strokeStyle = 'rgba(61,142,245,.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(xm, PT); ctx.lineTo(xm, PT + cH); ctx.stroke(); ctx.setLineDash([]); }
+      if (g) { const xg = toX(g.target); ctx.strokeStyle = 'rgba(251,191,36,.9)'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(xg, PT); ctx.lineTo(xg, PT + cH); ctx.stroke(); ctx.setLineDash([]); }
+      if (hoverRunId) { const hr = active.find(r => r.id === hoverRunId); if (hr) { const xh = toX(hr.duration); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(xh, PT); ctx.lineTo(xh, PT + cH); ctx.stroke(); } }
+      ctx.fillStyle = '#2e3f58'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+      for (let i = 0; i <= 4; i++)ctx.fillText(fmt(minV + range * i / 4), PL + (i / 4) * cW, PT + cH + 16);
+      if (st) ctx.fillText(`μ=${fmt(st.mean)}  σ=${fmt(st.std)}  n=${st.n}${g ? '  ⭐=' + fmt(g.target) : ''}`, PL + cW / 2, PT + cH + 26);
+    }
 
-// ── RUN LIST ──────────────────────────────────────────────────────────────────
-function buildRunList(){
-  const el=document.getElementById('run-list');
-  const g=getGolden();
-  const st=stats(displayRuns);
-  const maxDur=Math.max(...displayRuns.map(r=>r.duration),.01);
-  const exclN=displayRuns.filter(r=>r.excluded).length;
-  document.getElementById('excl-badge').textContent=exclN+' excluded';
+    // ── RUN LIST ──────────────────────────────────────────────────────────────────
+    function buildRunList() {
+      const el = document.getElementById('run-list');
+      const g = getGolden();
+      const st = stats(displayRuns);
+      const maxDur = Math.max(...displayRuns.map(r => r.duration), .01);
+      const exclN = displayRuns.filter(r => r.excluded).length;
+      document.getElementById('excl-badge').textContent = exclN + ' excluded';
 
-  const sorted=[...displayRuns].sort((a,b)=>b.duration-a.duration);
-  el.innerHTML=sorted.map(run=>{
-    const isE=run.excluded;
-    const status=g?runStatus(run.duration,g):(run.is_noop?'noop':'ok');
-    const sc=STATUS_COLOR[status]||(CMD_COLOR[run.command]||'#3d8ef5');
-    const dev=g?(run.duration-g.target):null;
-    const blPct=g?(g.target/maxDur*100):0;
-    const flagMap={ok:'flag-ok',warn:'flag-warn',crit:'flag-crit',noop:'flag-noop'};
-    const flagTxt={ok:'ok',warn:'warn',crit:'crit',noop:'no-op'};
-    let flag=isE?'skip':status;
-    return `<div class="run-item${isE?' excluded':''}${hoverRunId===run.id?' hov':''}"
+      const sorted = [...displayRuns].sort((a, b) => b.duration - a.duration);
+      el.innerHTML = sorted.map(run => {
+        const isE = run.excluded;
+        const status = g ? runStatus(run.duration, g) : (run.is_noop ? 'noop' : 'ok');
+        const sc = STATUS_COLOR[status] || (CMD_COLOR[run.command] || '#3d8ef5');
+        const dev = g ? (run.duration - g.target) : null;
+        const blPct = g ? (g.target / maxDur * 100) : 0;
+        const flagMap = { ok: 'flag-ok', warn: 'flag-warn', crit: 'flag-crit', noop: 'flag-noop' };
+        const flagTxt = { ok: 'ok', warn: 'warn', crit: 'crit', noop: 'no-op' };
+        let flag = isE ? 'skip' : status;
+        return `<div class="run-item${isE ? ' excluded' : ''}${hoverRunId === run.id ? ' hov' : ''}"
       onmouseenter="hoverRunId='${run.id}';redrawAll()" onmouseleave="hoverRunId=null;redrawAll()">
-      <span class="ri-idx">#${run.run_index+1}</span>
+      <span class="ri-idx">#${run.run_index + 1}</span>
       <div class="ri-bar">
-        <div class="ri-bar-fill" style="width:${run.duration/maxDur*100}%;background:${sc||CMD_COLOR[run.command]||'#3d8ef5'}88"></div>
-        ${g?`<div class="ri-bar-golden" style="left:${blPct}%"></div>`:''}
+        <div class="ri-bar-fill" style="width:${run.duration / maxDur * 100}%;background:${sc || CMD_COLOR[run.command] || '#3d8ef5'}88"></div>
+        ${g ? `<div class="ri-bar-golden" style="left:${blPct}%"></div>` : ''}
       </div>
-      <span class="ri-val" style="color:${sc||CMD_COLOR[run.command]||'#3d8ef5'}">${run.duration.toFixed(2)}s</span>
-      ${dev!=null&&!isE?`<span class="ri-dev" style="color:${dev>0?'var(--red)':'var(--green)'}">${dev>0?'+':''}${dev.toFixed(2)}s</span>`:'<span class="ri-dev" style="color:var(--muted)">—</span>'}
-      <span class="ri-flag ${isE?'flag-skip':flagMap[flag]||'flag-ok'}">${isE?'excl':flagTxt[flag]||'ok'}</span>
-      <button class="ri-excl" onclick="toggleExcl('${run.id}')">${isE?'restore':'excl'}</button>
+      <span class="ri-val" style="color:${sc || CMD_COLOR[run.command] || '#3d8ef5'}">${run.duration.toFixed(2)}s</span>
+      ${dev != null && !isE ? `<span class="ri-dev" style="color:${dev > 0 ? 'var(--red)' : 'var(--green)'}">${dev > 0 ? '+' : ''}${dev.toFixed(2)}s</span>` : '<span class="ri-dev" style="color:var(--muted)">—</span>'}
+      <span class="ri-flag ${isE ? 'flag-skip' : flagMap[flag] || 'flag-ok'}">${isE ? 'excl' : flagTxt[flag] || 'ok'}</span>
+      <button class="ri-excl" onclick="toggleExcl('${run.id}')">${isE ? 'restore' : 'excl'}</button>
     </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-function toggleExcl(id){
-  const r=allRuns.find(x=>x.id===id);if(r)r.excluded=!r.excluded;
-  // also sync in displayRuns
-  const dr=displayRuns.find(x=>x.id===id);if(dr)dr.excluded=!dr.excluded;
-  redrawAll();
-}
+    function toggleExcl(id) {
+      const r = allRuns.find(x => x.id === id); if (r) r.excluded = !r.excluded;
+      // also sync in displayRuns
+      const dr = displayRuns.find(x => x.id === id); if (dr) dr.excluded = !dr.excluded;
+      redrawAll();
+    }
 
-// ── GOLDEN LIBRARY ────────────────────────────────────────────────────────────
-function renderGoldenLibrary(){
-  const el=document.getElementById('golden-library');
-  const items=Object.entries(GOLDENS);
-  document.getElementById('lib-count').textContent=items.length+' saved';
-  if(!items.length){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:11px">No golden baselines saved yet.</div>';return;}
-  const srcLabel={mean:'Mean',median:'Median',p90:'P90',manual:'Manual',pick:'Picked'};
-  el.innerHTML=items.map(([k,g])=>{
-    const parts=k.split('::'),cmd=parts[2]||'?',c=CMD_COLOR[cmd]||'#888';
-    const isActive=k===gKey();
-    return `<div class="gl-item${isActive?' active':''}" onclick="jumpToGolden('${k}')">
+    // ── GOLDEN LIBRARY ────────────────────────────────────────────────────────────
+    function renderGoldenLibrary() {
+      const el = document.getElementById('golden-library');
+      const items = Object.entries(GOLDENS);
+      document.getElementById('lib-count').textContent = items.length + ' saved';
+      if (!items.length) { el.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:11px">No golden baselines saved yet.</div>'; return; }
+      const srcLabel = { mean: 'Mean', median: 'Median', p90: 'P90', manual: 'Manual', pick: 'Picked' };
+      el.innerHTML = items.map(([k, g]) => {
+        const parts = k.split('::'), cmd = parts[2] || '?', c = CMD_COLOR[cmd] || '#888';
+        const isActive = k === gKey();
+        return `<div class="gl-item${isActive ? ' active' : ''}" onclick="jumpToGolden('${k}')">
       <div class="gl-head">
         <span class="gl-cmd" style="color:${c}">${cmd}</span>
-        <span class="gc-src src-${g.source}" style="font-size:9px">${srcLabel[g.source]||g.source}</span>
-        ${isActive?'<span style="font-size:9px;color:var(--gold)">● active</span>':''}
+        <span class="gc-src src-${g.source}" style="font-size:9px">${srcLabel[g.source] || g.source}</span>
+        ${isActive ? '<span style="font-size:9px;color:var(--gold)">● active</span>' : ''}
       </div>
       <div class="gl-vals">
         <div class="gl-val-item"><div class="gl-val-lbl">Target</div><div style="color:var(--gold);font-weight:700">${fmt(g.target)}</div></div>
         <div class="gl-val-item"><div class="gl-val-lbl">Warn ±</div><div style="color:var(--yellow)">${fmt(g.warn)}</div></div>
         <div class="gl-val-item"><div class="gl-val-lbl">Crit ±</div><div style="color:var(--red)">${fmt(g.crit)}</div></div>
-        <div class="gl-val-item"><div class="gl-val-lbl">Device</div><div>${parts[1]||'?'}</div></div>
+        <div class="gl-val-item"><div class="gl-val-lbl">Device</div><div>${parts[1] || '?'}</div></div>
       </div>
-      ${g.note?`<div style="font-size:9px;color:var(--muted2);font-style:italic">${g.note}</div>`:''}
+      ${g.note ? `<div style="font-size:9px;color:var(--muted2);font-style:italic">${g.note}</div>` : ''}
       <div class="gl-actions">
         <button class="btn sm danger" onclick="event.stopPropagation();deleteGolden('${k}')">Delete</button>
       </div>
     </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-function jumpToGolden(k){
-  const [dt,dv,cm]=k.split('::');
-  document.getElementById('sel-dtype').value=dt;initSels();
-  document.getElementById('sel-dev').value=dv;
-  document.getElementById('sel-cmd').value=cm;
-  onFilter();
-}
-function deleteGolden(k){delete GOLDENS[k];redrawAll();}
+    function jumpToGolden(k) {
+      const [dt, dv, cm] = k.split('::');
+      document.getElementById('sel-dtype').value = dt;
+      onTypeChange();
+      document.getElementById('sel-dev').value = dv;
+      document.getElementById('sel-cmd').value = cm;
+      onFilter();
+    }
+    function deleteGolden(k) { delete GOLDENS[k]; redrawAll(); }
 
-// ── SAVE MODAL ────────────────────────────────────────────────────────────────
-function openSaveModal(){
-  const cm=document.getElementById('sel-cmd').value;
-  const c=CMD_COLOR[cm]||'#888';
-  document.getElementById('m-cmd-display').innerHTML=`<span style="color:${c}">${cm}</span>`;
-  setMethod('mean');
-  updateModalPreview();
-  document.getElementById('modal').classList.add('show');
-}
-function closeModal(){document.getElementById('modal').classList.remove('show');}
+    // ── SAVE MODAL ────────────────────────────────────────────────────────────────
+    function openSaveModal() {
+      const cm = document.getElementById('sel-cmd').value;
+      const c = CMD_COLOR[cm] || '#888';
+      document.getElementById('m-cmd-display').innerHTML = `<span style="color:${c}">${cm}</span>`;
+      setMethod('mean');
+      updateModalPreview();
+      document.getElementById('modal').classList.add('show');
+    }
+    function closeModal() { document.getElementById('modal').classList.remove('show'); }
 
-function setMethod(m){
-  saveMethod=m;
-  ['mean','median','p90','manual'].forEach(x=>{document.getElementById('mopt-'+x).classList.toggle('on',x===m);});
-  updateModalPreview();
-}
+    function setMethod(m) {
+      saveMethod = m;
+      ['mean', 'median', 'p90', 'manual'].forEach(x => { document.getElementById('mopt-' + x).classList.toggle('on', x === m); });
+      updateModalPreview();
+    }
 
-function updateModalPreview(){
-  const st=stats(displayRuns);if(!st){document.getElementById('m-preview').innerHTML='<span style="color:var(--muted)">No data</span>';return;}
-  let target,warn,crit,srcLabel;
-  if(saveMethod==='mean')   {target=st.mean;warn=st.std;crit=st.std*2;srcLabel='mean ± 1σ / 2σ';}
-  else if(saveMethod==='median'){target=st.med;warn=st.std;crit=st.std*2;srcLabel='median ± 1σ / 2σ';}
-  else if(saveMethod==='p90')   {target=st.p90;warn=(st.p90-st.mean);crit=(st.p90-st.mean)*2;srcLabel='P90 (upper-bound target)';}
-  else{target=parseFloat(document.getElementById('m-target')?.value)||st.mean;warn=parseFloat(document.getElementById('m-warn')?.value)||st.std;crit=parseFloat(document.getElementById('m-crit')?.value)||st.std*2;srcLabel='manual';}
+    function updateModalPreview() {
+      const st = stats(displayRuns); if (!st) { document.getElementById('m-preview').innerHTML = '<span style="color:var(--muted)">No data</span>'; return; }
+      let target, warn, crit, srcLabel;
+      if (saveMethod === 'mean') { target = st.mean; warn = st.std; crit = st.std * 2; srcLabel = 'mean ± 1σ / 2σ'; }
+      else if (saveMethod === 'median') { target = st.med; warn = st.std; crit = st.std * 2; srcLabel = 'median ± 1σ / 2σ'; }
+      else if (saveMethod === 'p90') { target = st.p90; warn = (st.p90 - st.mean); crit = (st.p90 - st.mean) * 2; srcLabel = 'P90 (upper-bound target)'; }
+      else { target = parseFloat(document.getElementById('m-target')?.value) || st.mean; warn = parseFloat(document.getElementById('m-warn')?.value) || st.std; crit = parseFloat(document.getElementById('m-crit')?.value) || st.std * 2; srcLabel = 'manual'; }
 
-  if(saveMethod!=='manual'){
-    document.getElementById('m-target').value=target.toFixed(3);
-    document.getElementById('m-warn').value=warn.toFixed(3);
-    document.getElementById('m-crit').value=crit.toFixed(3);
-  }
+      if (saveMethod !== 'manual') {
+        document.getElementById('m-target').value = target.toFixed(3);
+        document.getElementById('m-warn').value = warn.toFixed(3);
+        document.getElementById('m-crit').value = crit.toFixed(3);
+      }
 
-  document.getElementById('m-preview').innerHTML=`
+      document.getElementById('m-preview').innerHTML = `
     <div style="display:flex;gap:16px;font-size:11px">
       <span><span style="color:var(--muted2)">Method: </span><strong style="color:var(--gold)">${srcLabel}</strong></span>
       <span><span style="color:var(--muted2)">Target: </span><strong style="color:var(--gold)">${fmt(target)}</strong></span>
       <span><span style="color:var(--muted2)">Warn: </span><strong style="color:var(--yellow)">±${fmt(warn)}</strong></span>
       <span><span style="color:var(--muted2)">Crit: </span><strong style="color:var(--red)">±${fmt(crit)}</strong></span>
     </div>`;
-}
+    }
 
-// listen to manual changes
-['m-target','m-warn','m-crit'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('input',()=>{if(saveMethod==='manual')updateModalPreview();});
-});
+    // listen to manual changes
+    ['m-target', 'm-warn', 'm-crit'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => { if (saveMethod === 'manual') updateModalPreview(); });
+    });
 
-function saveGolden(){
-  const k=gKey();
-  const target=parseFloat(document.getElementById('m-target').value);
-  const warn  =parseFloat(document.getElementById('m-warn').value);
-  const crit  =parseFloat(document.getElementById('m-crit').value);
-  if(isNaN(target)||isNaN(warn)||isNaN(crit))return;
-  GOLDENS[k]={target,warn,crit,source:saveMethod,
-    note:document.getElementById('m-note').value.trim(),
-    createdAt:new Date().toLocaleString()};
-  closeModal();
-  redrawAll();
-}
+    function saveGolden() {
+      const k = gKey();
+      const target = parseFloat(document.getElementById('m-target').value);
+      const warn = parseFloat(document.getElementById('m-warn').value);
+      const crit = parseFloat(document.getElementById('m-crit').value);
+      if (isNaN(target) || isNaN(warn) || isNaN(crit)) return;
+      GOLDENS[k] = {
+        target, warn, crit, source: saveMethod,
+        note: document.getElementById('m-note').value.trim(),
+        createdAt: new Date().toLocaleString()
+      };
+      closeModal();
+      redrawAll();
+    }
 
-// ── REDRAW ────────────────────────────────────────────────────────────────────
-function redrawAll(){
-  renderGoldenCard();
-  updateStats();
-  drawRunChart();
-  drawDistChart();
-  buildRunList();
-  renderGoldenLibrary();
-}
+    // ── REDRAW ────────────────────────────────────────────────────────────────────
+    function redrawAll() {
+      renderGoldenCard();
+      updateStats();
+      drawRunChart();
+      drawDistChart();
+      buildRunList();
+      renderGoldenLibrary();
+      console.log("DEVICE_TYPES", DEVICE_TYPES);
+      console.table(displayRuns);
+      console.log('GOLDENS: ', GOLDENS);
+    }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-initSels();
-document.getElementById('sel-dtype').value='EFEM Robot';
-initSels();
-document.getElementById('sel-cmd').value='GetExtend';
-onFilter(); // this calls redrawAll
+    // ── INIT ──────────────────────────────────────────────────────────────────────
+    initSels();
+    onFilter();
 
-// Seed a demo golden for GetExtend
-setTimeout(()=>{
-  const st=stats(displayRuns);if(!st)return;
-  const k=gKey();
-  GOLDENS[k]={target:parseFloat(st.mean.toFixed(3)),warn:parseFloat(st.std.toFixed(3)),crit:parseFloat((st.std*2).toFixed(3)),source:'mean',note:'Demo baseline — auto-computed',createdAt:new Date().toLocaleString()};
-  redrawAll();
-},80);
-
-window.addEventListener('resize',()=>{drawRunChart();drawDistChart();});
-</script>
+    window.addEventListener('resize', () => { drawRunChart(); drawDistChart(); });
+  </script>
 </body>
+
 </html>
