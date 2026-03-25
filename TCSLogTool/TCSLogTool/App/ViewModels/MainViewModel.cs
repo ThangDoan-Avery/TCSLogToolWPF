@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Windows.Input;
 using TCSLogTool.Core.Services;
 using TCSLogTool.Domain.Entities;
+using TCSLogTool.Infrastructure.Mappers;
 
 namespace TCSLogTool.App.ViewModels;
 
@@ -35,6 +36,10 @@ public partial class MainViewModel : ObservableObject
 
     public ICommand OpenViewerCommand { get; }
 
+    public ICommand OpenCommandDurationLogViewer { get; }
+
+    public ICommand ExportCommandDurationJsonFile { get; }
+
     public MainViewModel(LogAnalyzerService analyzer)
     {
         this.analyzer = analyzer;
@@ -43,7 +48,11 @@ public partial class MainViewModel : ObservableObject
 
         ExportJsonCommand = new RelayCommand(ExportJson);
 
-        OpenViewerCommand = new RelayCommand(OpenViewer);
+        OpenViewerCommand = new RelayCommand(OpenDeviceCommandLogViewer);
+
+        OpenCommandDurationLogViewer = new RelayCommand(OpenCommandDurationViewer);
+
+        ExportCommandDurationJsonFile = new RelayCommand(ExportCommandDurationJson);
     }
 
     private void OpenFiles()
@@ -110,7 +119,7 @@ public partial class MainViewModel : ObservableObject
         var dialog = new SaveFileDialog
         {
             Filter = "JSON file (*.json)|*.json",
-            FileName = "output.json"
+            FileName = "DeviceLog.json"
         };
 
         if (dialog.ShowDialog() != true)
@@ -119,17 +128,17 @@ public partial class MainViewModel : ObservableObject
         File.WriteAllText(dialog.FileName, json);
     }
 
-    public void OpenViewer()
+    public void OpenDeviceCommandLogViewer()
     {
         var devices = DeviceMapper.Map(
             States.ToList(),
             Commands.ToList(),
             AttributeSeries.ToList());
 
-        OpenHtmlWithData(devices);
+        OpenDeviceCommandLogHtmlWithData(devices);
     }
 
-    private void OpenHtmlWithData(object devices)
+    private void OpenDeviceCommandLogHtmlWithData(object devices)
     {
         var json = JsonExportService.Export(devices);
 
@@ -161,5 +170,67 @@ public partial class MainViewModel : ObservableObject
             FileName = tempHtml,
             UseShellExecute = true
         });
+    }
+
+    // Command Duration Analysis Viewer
+    public void OpenCommandDurationViewer()
+    {
+        var deviceCommands = CommandDurationMapper.Map(
+            Commands.ToList());
+
+        OpenCommandDurationHtmlWithData(deviceCommands);
+    }
+
+    private void OpenCommandDurationHtmlWithData(object deviceCommands)
+    {
+        var json = JsonExportService.Export(deviceCommands);
+
+        var htmlPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "Assets",
+            "command-duration-analysis.html"
+        );
+
+        var tempHtml = Path.Combine(Path.GetTempPath(), "command-duration-analysis.html");
+
+        var html = File.ReadAllText(htmlPath);
+
+        var inject = $@"
+        <script>
+        window.addEventListener('load', function() {{
+            const data = {json};
+            window.setDevicesFromWpf(data);
+        }});
+        </script>
+        </body>";
+
+        html = html.Replace("</body>", inject);
+
+        File.WriteAllText(tempHtml, html);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = tempHtml,
+            UseShellExecute = true
+        });
+    }
+
+    public void ExportCommandDurationJson()
+    {
+        var deviceCommands = CommandDurationMapper.Map(
+            Commands.ToList());
+
+        var json = JsonExportService.Export(deviceCommands);
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "JSON file (*.json)|*.json",
+            FileName = "commandDuration.json"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        File.WriteAllText(dialog.FileName, json);
     }
 }

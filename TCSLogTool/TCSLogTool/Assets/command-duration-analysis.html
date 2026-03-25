@@ -954,61 +954,7 @@
 
   <script>
     // ── DEVICE / COMMAND DATA ─────────────────────────────────────────────────────
-    const RAW_DATA = {
-      devices: [
-        {
-          id: "EFEM-01",
-          type: "EFEM Robot",
-
-          commands: [
-            { name: "GetExtend", s: 1708646400000, e: 1708646415000, duration: 103 },
-            { name: "GetExtend", s: 1708646420000, e: 1708646442000, duration: 20 },
-            { name: "GetExtend", s: 1708646450000, e: 1708646480000, duration: 3.0 },
-
-            { name: "Home", s: 1708646500000, e: 1708646578000, duration: 7.8 },
-            { name: "Home", s: 1708646600000, e: 1708646680000, duration: 8.0 }
-          ]
-        },
-        {
-          id: "EFEM-02",
-          type: "EFEM Robot",
-
-          commands: [
-            { name: "GetExtend", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "GetExtend", s: 1708646430000, e: 1708646465000, duration: 3.5 },
-
-            { name: "Home", s: 1708646500000, e: 1708646585000, duration: 8.5 }
-          ]
-        },
-        {
-          id: "VALVE-01",
-          type: "VALVE",
-
-          commands: [
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Closed", s: 1708646400000, e: 1708646420000, duration: 2.0 },
-            { name: "Opened", s: 1708646430000, e: 1708646465000, duration: 3.5 },
-
-            { name: "Idle", s: 1708646500000, e: 1708646585000, duration: 8.5 }
-          ]
-        },
-        {
-          id: "VALVE-02",
-          type: "VALVE",
-
-          commands: [
-            { name: "Closed", s: 1708646400000, e: 1908646420000, duration: 40.0 },
-            { name: "Opened", s: 1708646430000, e: 1908646465000, duration: 3.5 },
-
-            { name: "Idle", s: 1708646500000, e: 1708646585000, duration: 2.5 }
-          ]
-        }
-      ]
-    };
+    const RAW_DATA = { devices: [] };
 
     const DEVICE_TYPES = buildDeviceTypes();
 
@@ -1120,7 +1066,6 @@
 
       return map;
     }
-
 
     // ── STATE ─────────────────────────────────────────────────────────────────────
     let allRuns = [], displayRuns = [], hoverRunId = null, saveMethod = 'mean';
@@ -1636,9 +1581,6 @@
       drawDistChart();
       buildRunList();
       renderGoldenLibrary();
-      console.log("DEVICE_TYPES", DEVICE_TYPES);
-      console.table(displayRuns);
-      console.log('GOLDENS: ', GOLDENS);
     }
 
     // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1646,6 +1588,15 @@
     onFilter();
 
     window.addEventListener('resize', () => { drawRunChart(); drawDistChart(); });
+
+    function setDevicesFromWpf(data) {
+      console.log("DATA FROM WPF:", data);
+
+      RAW_DATA.devices = data.devices || [];
+
+      initSels();
+      onFilter();
+    }
   </script>
 </body>
 

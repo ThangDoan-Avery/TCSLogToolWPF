@@ -4,45 +4,68 @@
         Title="TCS Log Tool"
         Height="600"
         Width="1100">
+
+    <Window.Resources>
+
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+    </Window.Resources>
     <DockPanel>
-        <DockPanel DockPanel.Dock="Top" LastChildFill="False" Background="#F0F0F0">
+        <DockPanel DockPanel.Dock="Top" Background="#F5F5F5" Margin="0,0,0,5">
 
-            <DockPanel.Resources>
-                <Style TargetType="TextBlock">
-                    <Setter Property="VerticalAlignment" Value="Center"/>
-                    <Setter Property="Margin" Value="10,0,0,0"/>
-                </Style>
-                <Style TargetType="Button">
-                    <Setter Property="Margin" Value="5"/>
-                    <Setter Property="Padding" Value="10,2"/>
-                </Style>
-            </DockPanel.Resources>
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="Open Log" Command="{Binding OpenFileCommand}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
+                    <Button Content="Open Log" Command="{Binding OpenFileCommand}" Margin="0,0,15,0"/>
 
-                <TextBlock Text="Files:"/>
-                <TextBlock Text="{Binding Statistics.FileCount}" Margin="5,0"/>
+                    <TextBlock Text="Files:" Margin="5,0"/>
+                    <TextBlock Text="{Binding Statistics.FileCount}" Margin="5,0"/>
 
-                <TextBlock Text="Commands:"/>
-                <TextBlock Text="{Binding Statistics.CommandCount}" Margin="5,0"/>
+                    <TextBlock Text="Commands:" Margin="10,0,0,0"/>
+                    <TextBlock Text="{Binding Statistics.CommandCount}" Margin="5,0"/>
 
-                <TextBlock Text="Devices:"/>
-                <TextBlock Text="{Binding Statistics.DeviceCount}" Margin="5,0"/>
+                    <TextBlock Text="Devices:" Margin="10,0,0,0"/>
+                    <TextBlock Text="{Binding Statistics.DeviceCount}" Margin="5,0"/>
 
-                <TextBlock Text="Start Time:"/>
-                <TextBlock Text="{Binding Statistics.StartTime}" Margin="5,0"/>
+                    <TextBlock Text="Start:" Margin="10,0,0,0"/>
+                    <TextBlock Text="{Binding Statistics.StartTime}" Margin="5,0"/>
 
-                <TextBlock Text="End Time:"/>
-                <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
-            </StackPanel>
+                    <TextBlock Text="End:" Margin="10,0,0,0"/>
+                    <TextBlock Text="{Binding Statistics.EndTime}" Margin="5,0"/>
+                </StackPanel>
 
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <Button Content="Export JSON" Command="{Binding ExportJsonCommand}"/>
-                <Button Content="Open Viewer" Command="{Binding OpenViewerCommand}" Margin="5,5,20,5"/>
-            </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
+
+                    <GroupBox Header="Device Command Log">
+                        <StackPanel>
+                            <Button Content="Export JSON" Command="{Binding ExportJsonCommand}"/>
+                            <Button Content="Open Viewer" Command="{Binding OpenViewerCommand}"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Command Duration Analysis">
+                        <StackPanel>
+                            <Button Content="Export JSON" Command="{Binding ExportCommandDurationJsonFile}"/>
+                            <Button Content="Open Viewer" Command="{Binding OpenCommandDurationLogViewer}"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                </StackPanel>
+
+            </Grid>
         </DockPanel>
-
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
