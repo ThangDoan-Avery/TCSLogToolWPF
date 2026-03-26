@@ -10,6 +10,8 @@ public class AttributeAnalyzer
     {
         Dictionary<string, AttributeSeries> seriesMap = new();
 
+        if (!logs.Any())
+            return new List<AttributeSeries>();
         foreach (var log in logs)
         {
             if (log.Device == null)

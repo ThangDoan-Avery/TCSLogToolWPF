@@ -2,8 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
-using System.ComponentModel.Design;
-using Microsoft.Win32;
 using System.IO;
 using System.Diagnostics;
 using System.Windows.Input;
@@ -18,41 +16,55 @@ public partial class MainViewModel : ObservableObject
     private readonly LogAnalyzerService analyzer;
 
     public ObservableCollection<LogEntry> Logs { get; } = new();
-
     public ObservableCollection<CommandExecution> Commands { get; } = new();
-
     public ObservableCollection<StateSegment> States { get; } = new();
-
     public ObservableCollection<AttributeSeries> AttributeSeries { get; } = new();
-
     public ObservableCollection<AttributePoint> AttributePoints { get; } = new();
+
+    private List<LogEntry> _allLogs = new();
+    private int _fileCount = 0;
+
+    [ObservableProperty]
+    private DateTime? filterStart;
+
+    [ObservableProperty]
+    private DateTime? filterEnd;
 
     [ObservableProperty]
     private LogStatistics statistics = new();
 
     public ICommand OpenFileCommand { get; }
-
     public ICommand ExportJsonCommand { get; }
-
     public ICommand OpenViewerCommand { get; }
-
     public ICommand OpenCommandDurationLogViewer { get; }
-
     public ICommand ExportCommandDurationJsonFile { get; }
+
+    public ICommand ApplyFilterCommand { get; }
 
     public MainViewModel(LogAnalyzerService analyzer)
     {
         this.analyzer = analyzer;
 
         OpenFileCommand = new RelayCommand(OpenFiles);
-
         ExportJsonCommand = new RelayCommand(ExportJson);
-
         OpenViewerCommand = new RelayCommand(OpenDeviceCommandLogViewer);
-
         OpenCommandDurationLogViewer = new RelayCommand(OpenCommandDurationViewer);
-
         ExportCommandDurationJsonFile = new RelayCommand(ExportCommandDurationJson);
+
+        ApplyFilterCommand = new RelayCommand(
+            ReFilter,
+            () => IsFilterValid()
+        );
+    }
+
+    private bool IsFilterValid()
+    {
+        if (!_allLogs.Any()) return false;
+
+        if (FilterStart.HasValue && FilterEnd.HasValue && FilterStart > FilterEnd)
+            return false;
+
+        return true;
     }
 
     private void OpenFiles()
@@ -66,27 +78,99 @@ public partial class MainViewModel : ObservableObject
         if (dialog.ShowDialog() != true)
             return;
 
-        var logs = analyzer.Load(dialog.FileNames);
+        _fileCount = dialog.FileNames.Length;
 
-        logs = logs
+        _allLogs = analyzer.Load(dialog.FileNames)
             .OrderBy(x => x.Timestamp)
             .ToList();
+
+        if (_allLogs.Any())
+        {
+            FilterStart = _allLogs.First().Timestamp.DateTime;
+            FilterEnd = _allLogs.Last().Timestamp.DateTime;
+        }
+        else
+        {
+            FilterStart = null;
+            FilterEnd = null;
+        }
+
+        LoadFullLogs();
+    }
+
+    private void LoadFullLogs()
+    {
+        if (_allLogs == null || !_allLogs.Any())
+        {
+            ClearAll();
+            Statistics = new LogStatistics();
+            return;
+        }
+
+        var commands = analyzer.AnalyzeCommands(_allLogs);
+        var states = analyzer.AnalyzeStates(_allLogs);
+        var attributes = analyzer.AnalyzeAttributes(_allLogs);
+
+        Statistics = LogStatisticsBuilder.Build(_allLogs, _fileCount);
+
+        UpdateCollections(_allLogs, commands, states, attributes);
+    }
+
+    private void ReFilter()
+    {
+        if (_allLogs == null || !_allLogs.Any())
+            return;
+
+        if (FilterStart.HasValue && FilterEnd.HasValue && FilterStart > FilterEnd)
+            return;
+
+        var start = FilterStart.HasValue
+            ? new DateTimeOffset(FilterStart.Value, _allLogs.First().Timestamp.Offset)
+            : (DateTimeOffset?)null;
+
+        var end = FilterEnd.HasValue
+            ? new DateTimeOffset(FilterEnd.Value, _allLogs.First().Timestamp.Offset)
+            : (DateTimeOffset?)null;
+
+        var logs = _allLogs
+            .Where(x =>
+                (!start.HasValue || x.Timestamp >= start.Value) &&
+                (!end.HasValue || x.Timestamp <= end.Value))
+            .OrderBy(x => x.Timestamp)
+            .ToList();
+
+        if (!logs.Any())
+        {
+            ClearAll();
+            Statistics = new LogStatistics();
+            return;
+        }
 
         var commands = analyzer.AnalyzeCommands(logs);
         var states = analyzer.AnalyzeStates(logs);
         var attributes = analyzer.AnalyzeAttributes(logs);
 
-        Statistics = LogStatisticsBuilder.Build(
-            logs,
-            dialog.FileNames.Length);
+        Statistics = LogStatisticsBuilder.Build(logs, _fileCount);
 
-        Debug.WriteLine($"Statistics: {Statistics.FileCount}");
+        UpdateCollections(logs, commands, states, attributes);
+    }
 
+    private void ClearAll()
+    {
         Logs.Clear();
         Commands.Clear();
         States.Clear();
         AttributeSeries.Clear();
         AttributePoints.Clear();
+    }
+
+    private void UpdateCollections(
+        List<LogEntry> logs,
+        List<CommandExecution> commands,
+        List<StateSegment> states,
+        List<AttributeSeries> attributes)
+    {
+        ClearAll();
 
         foreach (var log in logs)
             Logs.Add(log);
@@ -105,7 +189,6 @@ public partial class MainViewModel : ObservableObject
                 AttributePoints.Add(point);
         }
     }
-
 
     public void ExportJson()
     {
@@ -135,63 +218,28 @@ public partial class MainViewModel : ObservableObject
             Commands.ToList(),
             AttributeSeries.ToList());
 
-        OpenDeviceCommandLogHtmlWithData(devices);
+        OpenHtml("TCSLogTool.html", devices, "tcs_viewer.html");
     }
 
-    private void OpenDeviceCommandLogHtmlWithData(object devices)
-    {
-        var json = JsonExportService.Export(devices);
-
-        var htmlPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "Assets",
-            "TCSLogTool.html"
-        );
-
-        var tempHtml = Path.Combine(Path.GetTempPath(), "tcs_viewer.html");
-
-        var html = File.ReadAllText(htmlPath);
-
-        var inject = $@"
-        <script>
-        window.addEventListener('load', function() {{
-            const data = {json};
-            window.setDevicesFromWpf(data);
-        }});
-        </script>
-        </body>";
-
-        html = html.Replace("</body>", inject);
-
-        File.WriteAllText(tempHtml, html);
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = tempHtml,
-            UseShellExecute = true
-        });
-    }
-
-    // Command Duration Analysis Viewer
     public void OpenCommandDurationViewer()
     {
         var deviceCommands = CommandDurationMapper.Map(
             Commands.ToList());
 
-        OpenCommandDurationHtmlWithData(deviceCommands);
+        OpenHtml("command-duration-analysis.html", deviceCommands, "command-duration-analysis.html");
     }
 
-    private void OpenCommandDurationHtmlWithData(object deviceCommands)
+    private void OpenHtml(string assetFile, object data, string tempFile)
     {
-        var json = JsonExportService.Export(deviceCommands);
+        var json = JsonExportService.Export(data);
 
         var htmlPath = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory,
             "Assets",
-            "command-duration-analysis.html"
+            assetFile
         );
 
-        var tempHtml = Path.Combine(Path.GetTempPath(), "command-duration-analysis.html");
+        var tempHtml = Path.Combine(Path.GetTempPath(), tempFile);
 
         var html = File.ReadAllText(htmlPath);
 
@@ -232,5 +280,15 @@ public partial class MainViewModel : ObservableObject
             return;
 
         File.WriteAllText(dialog.FileName, json);
+    }
+
+    partial void OnFilterStartChanged(DateTime? value)
+    {
+        (ApplyFilterCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    partial void OnFilterEndChanged(DateTime? value)
+    {
+        (ApplyFilterCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 }

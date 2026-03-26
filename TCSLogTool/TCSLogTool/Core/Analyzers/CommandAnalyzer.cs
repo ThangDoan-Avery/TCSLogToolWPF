@@ -10,6 +10,8 @@ public class CommandAnalyzer
 
         var pending = new Dictionary<int, LogEntry>();
 
+        if (logs.Count == 0)
+            return result;
         logs = logs
             .OrderBy(x => x.Timestamp)
             .ToList();

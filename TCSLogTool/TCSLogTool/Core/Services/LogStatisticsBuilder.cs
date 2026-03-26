@@ -10,6 +10,9 @@ public static class LogStatisticsBuilder
     {
         LogStatistics stat = new();
 
+        if (logs.Count == 0)
+            return stat;
+
         stat.FileCount = fileCount;
 
         stat.CommandCount =
